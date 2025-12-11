@@ -32,7 +32,7 @@ def main(config, logger):
         embedding_dim=128,
         encoder_layers=8,
         encoder_heads=4,
-        decoder_layers=8,
+        decoder_layers=4,
         decoder_heads=4,
         mask_ratio=0.5,
     )
