@@ -1,7 +1,17 @@
-# Core packages for local data work.
-jupyterlab>=4.2
-matplotlib>=3.8
-numpy>=1.26
-pandas>=2.2
-python-dotenv>=1.0
-scikit-learn>=1.4
+torch>=2.0.0
+numpy>=1.23.0
+pandas>=1.5.0
+matplotlib>=3.6.0
+timm>=0.9.12
+einops>=0.6.1
+colored>=2.2.3
+rdp>=0.8
+scikit-learn>=1.2.0
+datasets>=2.14.0
+huggingface_hub>=0.16.0
+pyarrow>=12.0.0
+h3>=4.0.0
+# Optional: OSM context features
+osmnx>=1.6.0
+# Optional: commuting zone probes
+shapely>=2.0.0
