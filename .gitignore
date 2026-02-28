@@ -1,0 +1,28 @@
+# Virtual environment
+/.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Slurm job logs
+slurm-*.out
+
+# HuggingFace cache
+/.hf_cache/
+
+# Experiment result cache
+/cache/
+
+# Model checkpoints & weights
+/checkpoints/
+*.pt
+
+# Data files
+/data/
+
+# External cloned repos
+/external/
+
+# Docs (local notes/drafts)
+/docs/
