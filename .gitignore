@@ -25,4 +25,6 @@ slurm-*.out
 /external/
 
 # Docs (local notes/drafts)
-/docs/
+!/docs/
+/docs/*
+!/docs/foundation_evals.md

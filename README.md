@@ -148,3 +148,14 @@ python scripts/run_unitraj_eval.py \
   --task both \
   --output cache/unitraj_eval_step15000.json
 ```
+
+### One-command foundation evaluation suite (organized outputs)
+Use this when you want a clear, reproducible set of comparable experiments (benchmarks + UniTraj-style + robust + length sensitivity):
+```bash
+python scripts/run_foundation_suite.py \
+  --checkpoint checkpoints/hmt_step_15000.pt \
+  --local_data data/worldtrace_sample.pkl \
+  --split_mode both \
+  --name hmt_main
+```
+This writes all outputs and a manifest to `cache/foundation_suite/`.
