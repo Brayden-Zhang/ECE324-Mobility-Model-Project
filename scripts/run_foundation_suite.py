@@ -24,6 +24,11 @@ class SuiteDefaults:
     sample_limit: int = 0
     probe_epochs: int = 6
     probe_batch_size: int = 2048
+    quick_cpu_batch_size: int = 8
+    quick_cpu_max_len: int = 64
+    quick_cpu_sample_limit: int = 128
+    quick_cpu_probe_epochs: int = 2
+    quick_cpu_probe_batch_size: int = 256
 
 
 def detect_default_device() -> str:
@@ -92,16 +97,16 @@ def _apply_quick_cpu_mode(args) -> None:
         return
     args.device = "cpu"
     if args.batch_size == SuiteDefaults.batch_size:
-        args.batch_size = 8
+        args.batch_size = SuiteDefaults.quick_cpu_batch_size
     if args.max_len == SuiteDefaults.max_len:
-        args.max_len = 64
+        args.max_len = SuiteDefaults.quick_cpu_max_len
     if args.sample_limit == SuiteDefaults.sample_limit:
-        args.sample_limit = 128
+        args.sample_limit = SuiteDefaults.quick_cpu_sample_limit
 
 
 def _validate_args(args) -> None:
     if args.sample_limit < 0:
-        raise ValueError("--sample_limit must be >= 0")
+        raise ValueError(f"--sample_limit must be non-negative (>= 0), got {args.sample_limit}")
     if args.run_external_unitraj:
         if not args.unitraj_data_path:
             raise ValueError("--unitraj_data_path is required with --run_external_unitraj")
@@ -134,8 +139,10 @@ def _build_outputs(output_dir: Path, run_name: str) -> Dict[str, str]:
 
 def _build_commands(args, base: Dict[str, object], outputs: Dict[str, str]) -> List[List[str]]:
     commands: List[List[str]] = []
-    probe_epochs = 2 if args.quick_cpu_smoke else SuiteDefaults.probe_epochs
-    probe_batch_size = 256 if args.quick_cpu_smoke else SuiteDefaults.probe_batch_size
+    probe_epochs = SuiteDefaults.quick_cpu_probe_epochs if args.quick_cpu_smoke else SuiteDefaults.probe_epochs
+    probe_batch_size = (
+        SuiteDefaults.quick_cpu_probe_batch_size if args.quick_cpu_smoke else SuiteDefaults.probe_batch_size
+    )
 
     commands.append(
         _cmd(
