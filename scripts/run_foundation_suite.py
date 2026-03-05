@@ -9,6 +9,11 @@ from typing import Dict, List
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ROBUST_COORD_NOISE_STD_M = 30
+ROBUST_INPUT_DROP_RATIO = 0.2
+LENGTH_SENSITIVITY_MASK_RATIO = 0.3
+LENGTH_SENSITIVITY_DEST_MASK_LAST_K = 1
+DATA_EFFICIENCY_FRACTIONS = [0.05, 0.1, 0.2, 0.5, 1.0]
 
 
 def parse_args():
@@ -106,8 +111,10 @@ def main():
                 "split_mode": args.split_mode,
                 "task": "both",
                 "exclude_unknown": True,
-                "coord_noise_std_m": 30,
-                "input_drop_ratio": 0.2,
+                # Robust setting mirrors scripts/slurm_eval_full.sh and keeps
+                # HMT-vs-HMT comparisons on the same perturbation protocol.
+                "coord_noise_std_m": ROBUST_COORD_NOISE_STD_M,
+                "input_drop_ratio": ROBUST_INPUT_DROP_RATIO,
                 "output": outputs["unitraj_eval_robust"],
             },
         )
@@ -117,8 +124,10 @@ def main():
             "scripts/run_length_sensitivity.py",
             {
                 **base,
-                "mask_ratio": 0.3,
-                "dest_mask_last_k": 1,
+                # Use script defaults explicitly so the suite is reproducible.
+                "mask_ratio": LENGTH_SENSITIVITY_MASK_RATIO,
+                # Masking the last destination token avoids trivial copying.
+                "dest_mask_last_k": LENGTH_SENSITIVITY_DEST_MASK_LAST_K,
                 "output": outputs["length_sensitivity"],
             },
         )
@@ -131,7 +140,8 @@ def main():
                 "scripts/run_data_efficiency.py",
                 {
                     **base,
-                    "fractions": [0.05, 0.1, 0.2, 0.5, 1.0],
+                    # Standard coarse-to-full fractions used by slurm_eval_full.sh.
+                    "fractions": DATA_EFFICIENCY_FRACTIONS,
                     "split_mode": "both" if args.split_mode == "all" else args.split_mode,
                     "task": "both",
                     "output": outputs["data_efficiency"],

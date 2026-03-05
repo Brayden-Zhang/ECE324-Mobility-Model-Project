@@ -121,6 +121,7 @@ bash scripts/slurm_neurips_master.sh
 This orchestrates training, suite evaluation, downstream tasks, ablations, and UniTraj comparisons.
 
 ## Latest Results
+This block is automatically refreshed by `python scripts/collect_results.py` after experiments finish.
 <!-- RESULTS:BEGIN -->
 (pending)
 <!-- RESULTS:END -->
