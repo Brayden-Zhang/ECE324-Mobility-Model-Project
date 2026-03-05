@@ -108,6 +108,22 @@ def parse_args():
     parser.add_argument("--no_trip_features", dest="use_trip_features", action="store_false")
     parser.set_defaults(use_trip_features=True)
     parser.add_argument("--length_weighted_loss", action="store_true", help="normalize token loss per-trajectory length")
+    parser.add_argument(
+        "--length_adaptive_masking",
+        action="store_true",
+        help="scale masking ratio by trajectory length to improve robustness across short/long trips",
+    )
+    parser.add_argument(
+        "--length_mask_alpha",
+        type=float,
+        default=0.3,
+        help="strength of length-adaptive masking (0 disables extra scaling)",
+    )
+    parser.add_argument(
+        "--use_length_adapter",
+        action="store_true",
+        help="enable length-adaptive hidden gating before token heads",
+    )
 
     parser.add_argument("--osm_context", type=str, default="")
     parser.add_argument("--osm_context_dim", type=int, default=16)
@@ -392,6 +408,8 @@ def sample_mask_indices(
     mask_ratio: float,
     span_mask_prob: float,
     span_lambda: float,
+    length_adaptive: bool = False,
+    length_alpha: float = 0.3,
 ) -> torch.Tensor:
     mask_ratio = max(0.0, min(1.0, float(mask_ratio)))
     bsz, _ = attention_mask.shape
@@ -403,7 +421,12 @@ def sample_mask_indices(
             idx = torch.empty((0,), dtype=torch.long, device=attention_mask.device)
             indices.append(idx)
             continue
-        target = max(1, int(valid_len * mask_ratio))
+        local_ratio = mask_ratio
+        if length_adaptive:
+            length_frac = float(valid_len) / float(max(1, attention_mask.shape[1]))
+            local_ratio = mask_ratio * (1.0 + float(length_alpha) * (length_frac - 0.5) * 2.0)
+            local_ratio = max(0.01, min(0.95, local_ratio))
+        target = max(1, int(valid_len * local_ratio))
         selected = torch.zeros((valid_len,), dtype=torch.bool, device=attention_mask.device)
         while int(selected.sum().item()) < target:
             remaining = target - int(selected.sum().item())
@@ -567,6 +590,8 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
                 mask_ratio=args.mask_ratio,
                 span_mask_prob=args.span_mask_prob,
                 span_lambda=args.span_lambda,
+                length_adaptive=args.length_adaptive_masking,
+                length_alpha=args.length_mask_alpha,
             )
 
             context = None
@@ -759,6 +784,7 @@ def main():
         spacetime_freqs=args.space_time_freqs,
         macro_region_vocab=getattr(args, "macro_region_vocab", 0),
         macro_dist_dim=getattr(args, "macro_dist_dim", 0),
+        use_length_adapter=args.use_length_adapter,
     ).to(args.device)
 
     optim_params = list(model.parameters())
@@ -852,6 +878,8 @@ def main():
                 mask_ratio=mask_ratio,
                 span_mask_prob=args.span_mask_prob,
                 span_lambda=args.span_lambda,
+                length_adaptive=args.length_adaptive_masking,
+                length_alpha=args.length_mask_alpha,
             )
 
             coords_in = apply_coordinate_noise(coords, attention, args.coord_noise_std)

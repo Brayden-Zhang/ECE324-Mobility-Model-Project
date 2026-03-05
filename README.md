@@ -30,6 +30,8 @@ Robustness knobs you can tune:
 - `--mask_ratio_min`, `--mask_curriculum_steps` (masking curriculum)
 - `--span_mask_prob`, `--span_lambda` (span masking for contiguous trajectory dropout)
 - `--region_mask_ratio_min`, `--region_mask_curriculum_steps` (region-level curriculum masking)
+- `--length_adaptive_masking`, `--length_mask_alpha` (length-adaptive token masking for short/long trajectory balance)
+- `--use_length_adapter` (length-conditioned hidden gating before token heads)
 - `--coord_noise_std` (GPS jitter augmentation)
 - `--step_attention_window` (local sparse step-step attention, set `>0` to reduce quadratic attention cost)
 If your environment requires system Arrow (e.g., Compute Canada), load it before running:
@@ -118,6 +120,15 @@ python scripts/run_benchmarks.py \
   --local_data data/worldtrace_sample.pkl \
   --disable_graph \
   --output cache/benchmark_results_fast.json
+```
+
+### One-command downstream benchmark suite
+Run downstream probes plus core benchmark and length-sensitivity in one command:
+```bash
+python scripts/run_foundation_eval_suite.py \
+  --checkpoint checkpoints/hmt_step_5000.pt \
+  --local_data data/worldtrace_sample.pkl \
+  --output cache/foundation_suite/summary.json
 ```
 
 ### Optional: build OSM context features

@@ -40,6 +40,7 @@ class TrajectoryFMHMT(nn.Module):
         spacetime_freqs: int = 6,
         macro_region_vocab: int = 0,
         macro_dist_dim: int = 0,
+        use_length_adapter: bool = False,
     ):
         super().__init__()
         self.vocab_l0 = vocab_l0
@@ -54,6 +55,7 @@ class TrajectoryFMHMT(nn.Module):
         self.use_spacetime = use_spacetime
         self.macro_region_vocab = macro_region_vocab
         self.macro_dist_dim = macro_dist_dim
+        self.use_length_adapter = use_length_adapter
 
         self.encoder = HMTEncoder(
             vocab_l0=vocab_l0,
@@ -118,6 +120,14 @@ class TrajectoryFMHMT(nn.Module):
         )
         self.flow_head = FlowMatchingHead(embed_dim)
         self.flow_proj = nn.Linear(embed_dim, embed_dim, bias=False)
+        self.length_adapter = None
+        if self.use_length_adapter:
+            self.length_adapter = nn.Sequential(
+                nn.Linear(3, embed_dim),
+                nn.SiLU(),
+                nn.Linear(embed_dim, embed_dim),
+                nn.Tanh(),
+            )
 
     def build_step_graph(
         self,
@@ -295,6 +305,15 @@ class TrajectoryFMHMT(nn.Module):
         step_hidden = hidden[:, :seq_len]
         mid_hidden = hidden[:, seq_len : seq_len + mid_count]
         coarse_hidden = hidden[:, seq_len + mid_count :]
+        if self.length_adapter is not None:
+            trip_len = attention_mask.sum(dim=1, keepdim=True).float().clamp(min=1.0)
+            max_len = float(max(1, attention_mask.shape[1]))
+            len_ratio = trip_len / max_len
+            len_log = torch.log1p(trip_len) / math.log1p(max_len)
+            inv_sqrt = trip_len.rsqrt()
+            length_feat = torch.cat([len_ratio, len_log, inv_sqrt], dim=-1)
+            gate = self.length_adapter(length_feat).unsqueeze(1)
+            step_hidden = step_hidden + gate * step_hidden
 
         step_logits = {
             "l0": self.head_l0(step_hidden),
