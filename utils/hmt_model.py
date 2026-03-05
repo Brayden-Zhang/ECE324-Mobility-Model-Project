@@ -308,9 +308,10 @@ class TrajectoryFMHMT(nn.Module):
         if self.length_adapter is not None:
             trip_len = attention_mask.sum(dim=1, keepdim=True).float().clamp(min=1.0)
             max_len = float(max(1, attention_mask.shape[1]))
+            log_max_len = math.log1p(max_len)
             len_ratio = trip_len / max_len
-            len_log = torch.log1p(trip_len) / math.log1p(max_len)
-            inv_sqrt = trip_len.rsqrt()
+            len_log = torch.log1p(trip_len) / log_max_len
+            inv_sqrt = trip_len.clamp(min=1.0).rsqrt()
             length_feat = torch.cat([len_ratio, len_log, inv_sqrt], dim=-1)
             gate = self.length_adapter(length_feat).unsqueeze(1)
             step_hidden = step_hidden + gate * step_hidden

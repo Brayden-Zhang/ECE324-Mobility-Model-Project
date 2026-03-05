@@ -82,7 +82,7 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump(summary, f, indent=2)
-    print(f"saved foundation suite summary: {out_path}")
+    print(f"Saved foundation suite summary: {out_path}")
 
 
 if __name__ == "__main__":

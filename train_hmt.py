@@ -23,6 +23,11 @@ from utils.flow import sample_rectified_flow_targets, flow_matching_loss
 from utils.context import OSMContextIndex, context_tensor_from_index
 from utils.macro_dataset import MacroDistributionDataset
 
+LENGTH_SCALE_CENTER = 0.5
+LENGTH_SCALE_FACTOR = 2.0
+MIN_LOCAL_MASK_RATIO = 0.01
+MAX_LOCAL_MASK_RATIO = 0.95
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train TrajectoryFM with hierarchical mobility tokens")
@@ -424,8 +429,10 @@ def sample_mask_indices(
         local_ratio = mask_ratio
         if length_adaptive:
             length_frac = float(valid_len) / float(max(1, attention_mask.shape[1]))
-            local_ratio = mask_ratio * (1.0 + float(length_alpha) * (length_frac - 0.5) * 2.0)
-            local_ratio = max(0.01, min(0.95, local_ratio))
+            # Center at 0.5 and scale by 2.0 so length_scale spans [-1, 1] from shortest to longest trips.
+            length_scale = (length_frac - LENGTH_SCALE_CENTER) * LENGTH_SCALE_FACTOR
+            local_ratio = mask_ratio * (1.0 + float(length_alpha) * length_scale)
+            local_ratio = max(MIN_LOCAL_MASK_RATIO, min(MAX_LOCAL_MASK_RATIO, local_ratio))
         target = max(1, int(valid_len * local_ratio))
         selected = torch.zeros((valid_len,), dtype=torch.bool, device=attention_mask.device)
         while int(selected.sum().item()) < target:
