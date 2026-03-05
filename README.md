@@ -159,3 +159,13 @@ python scripts/run_foundation_suite.py \
   --name hmt_main
 ```
 This writes all outputs and a manifest to `cache/foundation_suite/`.
+
+Quick CPU smoke verification on a tiny sample:
+```bash
+python scripts/run_foundation_suite.py \
+  --checkpoint checkpoints/hmt_step_15000.pt \
+  --local_data data/worldtrace_sample.pkl \
+  --quick_cpu_smoke \
+  --sample_limit 128 \
+  --name cpu_smoke
+```

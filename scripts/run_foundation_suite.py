@@ -4,6 +4,7 @@ import json
 import shlex
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
@@ -16,6 +17,24 @@ LENGTH_SENSITIVITY_DEST_MASK_LAST_K = 1
 DATA_EFFICIENCY_FRACTIONS = [0.05, 0.1, 0.2, 0.5, 1.0]
 
 
+@dataclass
+class SuiteDefaults:
+    batch_size: int = 32
+    max_len: int = 200
+    sample_limit: int = 0
+    probe_epochs: int = 6
+    probe_batch_size: int = 2048
+
+
+def detect_default_device() -> str:
+    try:
+        import torch
+
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Run a reproducible local foundation-model evaluation suite (HMT + UniTraj-comparable metrics)."
@@ -23,10 +42,11 @@ def parse_args():
     parser.add_argument("--checkpoint", type=str, required=True, help="HMT checkpoint path")
     parser.add_argument("--local_data", type=str, required=True, help="WorldTrace-format local eval data (.pkl/.parquet)")
     parser.add_argument("--output_dir", type=str, default="cache/foundation_suite", help="Output directory for JSON results")
-    parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--max_len", type=int, default=200)
-    parser.add_argument("--split_mode", type=str, default="both", choices=["both", "random", "temporal", "all"])
+    parser.add_argument("--device", type=str, default=detect_default_device())
+    parser.add_argument("--batch_size", type=int, default=SuiteDefaults.batch_size)
+    parser.add_argument("--max_len", type=int, default=SuiteDefaults.max_len)
+    parser.add_argument("--sample_limit", type=int, default=SuiteDefaults.sample_limit)
+    parser.add_argument("--split_mode", type=str, default="both", choices=["both", "random", "temporal"])
     parser.add_argument("--run_data_efficiency", action="store_true", help="Also run centroid-data-efficiency sweep")
     parser.add_argument("--run_invariance", action="store_true", help="Also run invariance suite")
     parser.add_argument(
@@ -36,13 +56,20 @@ def parse_args():
     )
     parser.add_argument("--unitraj_data_path", type=str, default="", help="Data path for external UniTraj eval")
     parser.add_argument("--unitraj_checkpoint", type=str, default="", help="Checkpoint for external UniTraj eval")
+    parser.add_argument(
+        "--quick_cpu_smoke",
+        action="store_true",
+        help="Use low-cost defaults for quick CPU verification on a small sample.",
+    )
+    parser.add_argument("--dry_run", action="store_true", help="Print commands without executing them.")
     parser.add_argument("--name", type=str, default="latest", help="Run tag used in output filenames")
     return parser.parse_args()
 
 
-def run_cmd(cmd: List[str]):
+def run_cmd(cmd: List[str], dry_run: bool = False):
     print(">>>", " ".join(shlex.quote(c) for c in cmd))
-    subprocess.run(cmd, check=True)
+    if not dry_run:
+        subprocess.run(cmd, check=True)
 
 
 def _cmd(pyfile: str, params: Dict[str, object]) -> List[str]:
@@ -60,33 +87,64 @@ def _cmd(pyfile: str, params: Dict[str, object]) -> List[str]:
     return cmd
 
 
-def main():
-    args = parse_args()
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+def _apply_quick_cpu_mode(args) -> None:
+    if not args.quick_cpu_smoke:
+        return
+    args.device = "cpu"
+    if args.batch_size == SuiteDefaults.batch_size:
+        args.batch_size = 8
+    if args.max_len == SuiteDefaults.max_len:
+        args.max_len = 64
+    if args.sample_limit == SuiteDefaults.sample_limit:
+        args.sample_limit = 128
 
-    base = {
+
+def _validate_args(args) -> None:
+    if args.sample_limit < 0:
+        raise ValueError("--sample_limit must be >= 0")
+    if args.run_external_unitraj:
+        if not args.unitraj_data_path:
+            raise ValueError("--unitraj_data_path is required with --run_external_unitraj")
+        if not args.unitraj_checkpoint:
+            raise ValueError("--unitraj_checkpoint is required with --run_external_unitraj")
+        unitraj_ckpt = Path(args.unitraj_checkpoint)
+        if not unitraj_ckpt.exists():
+            raise FileNotFoundError(f"unitraj checkpoint not found: {unitraj_ckpt}")
+
+
+def _base_params(args) -> Dict[str, object]:
+    return {
         "checkpoint": args.checkpoint,
         "local_data": args.local_data,
         "device": args.device,
         "batch_size": args.batch_size,
         "max_len": args.max_len,
+        "sample_limit": args.sample_limit,
     }
 
-    outputs = {
-        "benchmarks": str(output_dir / f"benchmark_{args.name}.json"),
-        "unitraj_eval": str(output_dir / f"unitraj_eval_{args.name}.json"),
-        "unitraj_eval_robust": str(output_dir / f"unitraj_eval_robust_{args.name}.json"),
-        "length_sensitivity": str(output_dir / f"length_sensitivity_{args.name}.json"),
+
+def _build_outputs(output_dir: Path, run_name: str) -> Dict[str, str]:
+    return {
+        "benchmarks": str(output_dir / f"benchmark_{run_name}.json"),
+        "unitraj_eval": str(output_dir / f"unitraj_eval_{run_name}.json"),
+        "unitraj_eval_robust": str(output_dir / f"unitraj_eval_robust_{run_name}.json"),
+        "length_sensitivity": str(output_dir / f"length_sensitivity_{run_name}.json"),
     }
 
+
+def _build_commands(args, base: Dict[str, object], outputs: Dict[str, str]) -> List[List[str]]:
     commands: List[List[str]] = []
+    probe_epochs = 2 if args.quick_cpu_smoke else SuiteDefaults.probe_epochs
+    probe_batch_size = 256 if args.quick_cpu_smoke else SuiteDefaults.probe_batch_size
+
     commands.append(
         _cmd(
             "scripts/run_benchmarks.py",
             {
                 **base,
-                "split_mode": "both" if args.split_mode == "all" else args.split_mode,
+                "split_mode": args.split_mode,
+                "probe_epochs": probe_epochs,
+                "probe_batch_size": probe_batch_size,
                 "output": outputs["benchmarks"],
             },
         )
@@ -134,7 +192,7 @@ def main():
     )
 
     if args.run_data_efficiency:
-        outputs["data_efficiency"] = str(output_dir / f"unitraj_data_efficiency_{args.name}.json")
+        outputs["data_efficiency"] = str(Path(args.output_dir) / f"unitraj_data_efficiency_{args.name}.json")
         commands.append(
             _cmd(
                 "scripts/run_data_efficiency.py",
@@ -142,7 +200,7 @@ def main():
                     **base,
                     # Standard coarse-to-full fractions used by slurm_eval_full.sh.
                     "fractions": DATA_EFFICIENCY_FRACTIONS,
-                    "split_mode": "both" if args.split_mode == "all" else args.split_mode,
+                    "split_mode": args.split_mode,
                     "task": "both",
                     "output": outputs["data_efficiency"],
                 },
@@ -150,7 +208,7 @@ def main():
         )
 
     if args.run_invariance:
-        outputs["invariance"] = str(output_dir / f"invariance_{args.name}.json")
+        outputs["invariance"] = str(Path(args.output_dir) / f"invariance_{args.name}.json")
         commands.append(
             _cmd(
                 "scripts/run_invariance_suite.py",
@@ -162,9 +220,7 @@ def main():
         )
 
     if args.run_external_unitraj:
-        if not args.unitraj_data_path:
-            raise ValueError("--unitraj_data_path is required with --run_external_unitraj")
-        outputs["unitraj_external"] = str(output_dir / f"unitraj_external_eval_{args.name}.json")
+        outputs["unitraj_external"] = str(Path(args.output_dir) / f"unitraj_external_eval_{args.name}.json")
         commands.append(
             _cmd(
                 "scripts/run_unitraj_external_eval.py",
@@ -179,9 +235,22 @@ def main():
                 },
             )
         )
+    return commands
+
+
+def main():
+    args = parse_args()
+    _apply_quick_cpu_mode(args)
+    _validate_args(args)
+
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    base = _base_params(args)
+    outputs = _build_outputs(output_dir, args.name)
+    commands = _build_commands(args, base, outputs)
 
     for cmd in commands:
-        run_cmd(cmd)
+        run_cmd(cmd, dry_run=args.dry_run)
 
     manifest_path = output_dir / f"suite_manifest_{args.name}.json"
     with open(manifest_path, "w") as f:
@@ -192,6 +261,8 @@ def main():
                 "output_dir": str(output_dir),
                 "outputs": outputs,
                 "commands": commands,
+                "quick_cpu_smoke": bool(args.quick_cpu_smoke),
+                "dry_run": bool(args.dry_run),
             },
             f,
             indent=2,

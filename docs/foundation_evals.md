@@ -38,6 +38,21 @@ This runs and stores:
 
 Outputs are written under `cache/foundation_suite/` with a JSON manifest.
 
+### CPU-friendly quick verification (small scale)
+This mode is intended for easy correctness checks on laptops/CPU machines and tiny subsets:
+```bash
+python scripts/run_foundation_suite.py \
+  --checkpoint checkpoints/hmt_step_15000.pt \
+  --local_data data/worldtrace_sample.pkl \
+  --quick_cpu_smoke \
+  --sample_limit 128 \
+  --name cpu_smoke
+```
+Notes:
+- `--quick_cpu_smoke` forces CPU and reduces evaluation cost (`batch_size`, `max_len`, probe training cost).
+- `--sample_limit` propagates to underlying evaluators for tiny, fast runs.
+- Add `--dry_run` to inspect exact commands without executing.
+
 ## 3) UniTraj-Comparable Protocol
 
 ### HMT evaluated with UniTraj-style metrics
@@ -59,6 +74,7 @@ python scripts/run_unitraj_external_eval.py \
   --task both \
   --output cache/unitraj_external_eval.json
 ```
+If running through the suite wrapper, provide both `--unitraj_data_path` and `--unitraj_checkpoint`.
 
 ### Side-by-side comparison CSV
 ```bash
