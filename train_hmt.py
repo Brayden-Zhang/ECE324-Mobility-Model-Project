@@ -25,15 +25,30 @@ from utils.macro_dataset import MacroDistributionDataset
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train TrajectoryFM with hierarchical mobility tokens")
+    parser = argparse.ArgumentParser(
+        description="Train TrajectoryFM with hierarchical mobility tokens")
     parser.add_argument("--hf_name", type=str, default="OpenTrace/WorldTrace")
     parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--streaming", action="store_true")
-    parser.add_argument("--data_mode", type=str, default="hf_zip", choices=["hf_zip", "hf_stream", "local"])
-    parser.add_argument("--worldtrace_file", type=str, default="Trajectory.zip")
+    parser.add_argument(
+        "--data_mode",
+        type=str,
+        default="hf_zip",
+        choices=[
+            "hf_zip",
+            "hf_stream",
+            "local"])
+    parser.add_argument(
+        "--worldtrace_file",
+        type=str,
+        default="Trajectory.zip")
     parser.add_argument("--worldtrace_local_path", type=str, default="")
     parser.add_argument("--shuffle_buffer", type=int, default=1000)
-    parser.add_argument("--take", type=int, default=0, help="limit records for debug; <=0 means full split")
+    parser.add_argument(
+        "--take",
+        type=int,
+        default=0,
+        help="limit records for debug; <=0 means full split")
     parser.add_argument("--local_data", type=str, default="")
     parser.add_argument("--val_local_data", type=str, default="")
     parser.add_argument("--test_local_data", type=str, default="")
@@ -58,21 +73,36 @@ def parse_args():
     parser.add_argument("--min_lr_ratio", type=float, default=0.1)
     parser.add_argument("--grad_clip", type=float, default=1.0)
     parser.add_argument("--accum_steps", type=int, default=1)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--amp", dest="amp", action="store_true")
     parser.add_argument("--no_amp", dest="amp", action="store_false")
     parser.set_defaults(amp=True)
 
-    parser.add_argument("--tokenizer", type=str, default="h3", choices=["h3", "vq"])
+    parser.add_argument(
+        "--tokenizer",
+        type=str,
+        default="h3",
+        choices=[
+            "h3",
+            "vq"])
     parser.add_argument("--res0", type=int, default=9)
     parser.add_argument("--res1", type=int, default=7)
     parser.add_argument("--res2", type=int, default=5)
     parser.add_argument("--vocab_l0", type=int, default=16384)
     parser.add_argument("--vocab_l1", type=int, default=4096)
     parser.add_argument("--vocab_l2", type=int, default=1024)
-    parser.add_argument("--hash_tokens", dest="hash_tokens", action="store_true")
-    parser.add_argument("--no_hash_tokens", dest="hash_tokens", action="store_false")
+    parser.add_argument(
+        "--hash_tokens",
+        dest="hash_tokens",
+        action="store_true")
+    parser.add_argument(
+        "--no_hash_tokens",
+        dest="hash_tokens",
+        action="store_false")
     parser.set_defaults(hash_tokens=False)
     parser.add_argument("--h3_vocab", type=str, default="")
 
@@ -85,12 +115,24 @@ def parse_args():
     parser.add_argument("--graph_knn", type=int, default=8)
     parser.add_argument("--graph_temporal_window", type=int, default=2)
     parser.add_argument("--step_attention_window", type=int, default=0)
-    parser.add_argument("--graph_same_region", dest="graph_same_region", action="store_true")
-    parser.add_argument("--no_graph_same_region", dest="graph_same_region", action="store_false")
+    parser.add_argument(
+        "--graph_same_region",
+        dest="graph_same_region",
+        action="store_true")
+    parser.add_argument(
+        "--no_graph_same_region",
+        dest="graph_same_region",
+        action="store_false")
     parser.set_defaults(graph_same_region=True)
 
-    parser.add_argument("--space_time_encoder", dest="space_time_encoder", action="store_true")
-    parser.add_argument("--no_space_time_encoder", dest="space_time_encoder", action="store_false")
+    parser.add_argument(
+        "--space_time_encoder",
+        dest="space_time_encoder",
+        action="store_true")
+    parser.add_argument(
+        "--no_space_time_encoder",
+        dest="space_time_encoder",
+        action="store_false")
     parser.set_defaults(space_time_encoder=False)
     parser.add_argument("--space_time_freqs", type=int, default=6)
 
@@ -102,21 +144,53 @@ def parse_args():
     parser.add_argument("--consistency_weight", type=float, default=0.2)
     parser.add_argument("--region_mask_ratio", type=float, default=0.2)
     parser.add_argument("--region_mask_ratio_min", type=float, default=0.05)
-    parser.add_argument("--region_mask_curriculum_steps", type=int, default=20000)
+    parser.add_argument(
+        "--region_mask_curriculum_steps",
+        type=int,
+        default=20000)
     parser.add_argument("--coord_noise_std", type=float, default=0.0)
-    parser.add_argument("--use_trip_features", dest="use_trip_features", action="store_true")
-    parser.add_argument("--no_trip_features", dest="use_trip_features", action="store_false")
+    parser.add_argument(
+        "--use_trip_features",
+        dest="use_trip_features",
+        action="store_true")
+    parser.add_argument(
+        "--no_trip_features",
+        dest="use_trip_features",
+        action="store_false")
     parser.set_defaults(use_trip_features=True)
-    parser.add_argument("--length_weighted_loss", action="store_true", help="normalize token loss per-trajectory length")
+    parser.add_argument(
+        "--length_weighted_loss",
+        action="store_true",
+        help=(
+            "normalize token loss per-trajectory length "
+            "(Length-Balanced Token Loss)"
+        ),
+    )
+    parser.add_argument(
+        "--length_balanced_loss",
+        action="store_true",
+        help="alias of --length_weighted_loss",
+    )
 
     parser.add_argument("--osm_context", type=str, default="")
     parser.add_argument("--osm_context_dim", type=int, default=16)
     parser.add_argument("--max_eval_batches", type=int, default=25)
     parser.add_argument("--results_path", type=str, default="")
     parser.add_argument("--ckpt_prefix", type=str, default="hmt")
-    parser.add_argument("--resume", type=str, default="", help="resume from checkpoint (model/tokenizer/time)")
-    parser.add_argument("--resume_optimizer", action="store_true", help="also resume optimizer/scheduler state")
-    parser.add_argument("--macro_data", type=str, default="", help="macro distribution npz for multi-task training")
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default="",
+        help="resume from checkpoint (model/tokenizer/time)")
+    parser.add_argument(
+        "--resume_optimizer",
+        action="store_true",
+        help="also resume optimizer/scheduler state")
+    parser.add_argument(
+        "--macro_data",
+        type=str,
+        default="",
+        help="macro distribution npz for multi-task training")
     parser.add_argument("--macro_batch_size", type=int, default=256)
     parser.add_argument("--macro_weight", type=float, default=1.0)
     parser.add_argument("--macro_mix_prob", type=float, default=0.5)
@@ -173,15 +247,17 @@ def build_macro_loaders(args):
         num_workers=min(args.num_workers, 2),
     )
     val_loader = (
-        DataLoader(val_ds, batch_size=args.macro_batch_size, shuffle=False, num_workers=0)
-        if val_n > 0
-        else None
-    )
+        DataLoader(
+            val_ds,
+            batch_size=args.macro_batch_size,
+            shuffle=False,
+            num_workers=0) if val_n > 0 else None)
     test_loader = (
-        DataLoader(test_ds, batch_size=args.macro_batch_size, shuffle=False, num_workers=0)
-        if test_n > 0
-        else None
-    )
+        DataLoader(
+            test_ds,
+            batch_size=args.macro_batch_size,
+            shuffle=False,
+            num_workers=0) if test_n > 0 else None)
     return train_loader, val_loader, test_loader
 
 
@@ -192,10 +268,20 @@ def macro_batch_loss(model, time_encoder, batch, device: str) -> torch.Tensor:
     attn = torch.ones((region_idx.shape[0], 1), device=device)
     time_embed = time_encoder(time_ts.unsqueeze(1), attn)[:, 0]
     logits = model.macro_logits(region_idx, time_embed)
-    return F.kl_div(F.log_softmax(logits.float(), dim=-1), dist, reduction="batchmean")
+    return F.kl_div(
+        F.log_softmax(
+            logits.float(),
+            dim=-1),
+        dist,
+        reduction="batchmean")
 
 
-def evaluate_macro(model, time_encoder, loader, device: str, max_batches: int) -> float:
+def evaluate_macro(
+        model,
+        time_encoder,
+        loader,
+        device: str,
+        max_batches: int) -> float:
     if loader is None:
         return 0.0
     model.eval()
@@ -268,8 +354,8 @@ def _local_splits(samples, seed: int, val_ratio: float, test_ratio: float):
         n_test = max(1, n // 5)
     n_train = max(1, n - n_val - n_test)
     train_idx = idx[:n_train]
-    val_idx = idx[n_train : n_train + n_val]
-    test_idx = idx[n_train + n_val :]
+    val_idx = idx[n_train: n_train + n_val]
+    test_idx = idx[n_train + n_val:]
     if not val_idx:
         val_idx = train_idx[: min(len(train_idx), max(1, n // 10))]
     if not test_idx:
@@ -316,10 +402,22 @@ def build_dataloaders(args, take_override=None):
         else:
             test_samples = auto_test_samples
 
-        train_ds = WorldTraceMapDataset(train_samples, max_len=args.max_len, mask_ratio=args.mask_ratio)
-        val_ds = WorldTraceMapDataset(val_samples, max_len=args.max_len, mask_ratio=args.mask_ratio)
-        test_ds = WorldTraceMapDataset(test_samples, max_len=args.max_len, mask_ratio=args.mask_ratio)
-        return make_dataloader(args, train_ds), make_dataloader(args, val_ds), make_dataloader(args, test_ds)
+        train_ds = WorldTraceMapDataset(
+            train_samples,
+            max_len=args.max_len,
+            mask_ratio=args.mask_ratio)
+        val_ds = WorldTraceMapDataset(
+            val_samples,
+            max_len=args.max_len,
+            mask_ratio=args.mask_ratio)
+        test_ds = WorldTraceMapDataset(
+            test_samples,
+            max_len=args.max_len,
+            mask_ratio=args.mask_ratio)
+        return make_dataloader(
+            args, train_ds), make_dataloader(
+            args, val_ds), make_dataloader(
+            args, test_ds)
     elif data_mode == "hf_stream":
         train_ds = WorldTraceIterableDataset(
             args.hf_name,
@@ -329,7 +427,8 @@ def build_dataloaders(args, take_override=None):
             shuffle_buffer=args.shuffle_buffer,
             take=take,
         )
-        eval_take = take if take is not None else min(5000, args.batch_size * 200)
+        eval_take = take if take is not None else min(
+            5000, args.batch_size * 200)
         val_ds = WorldTraceIterableDataset(
             args.hf_name,
             split=args.split,
@@ -338,7 +437,10 @@ def build_dataloaders(args, take_override=None):
             shuffle_buffer=args.shuffle_buffer,
             take=eval_take,
         )
-        return make_dataloader(args, train_ds), make_dataloader(args, val_ds), make_dataloader(args, val_ds)
+        return make_dataloader(
+            args, train_ds), make_dataloader(
+            args, val_ds), make_dataloader(
+            args, val_ds)
     else:
         train_ds = WorldTraceZipIterableDataset(
             args.hf_name,
@@ -350,7 +452,8 @@ def build_dataloaders(args, take_override=None):
             local_path=args.worldtrace_local_path,
             seed=args.seed,
         )
-        eval_take = take if take is not None else min(5000, args.batch_size * 200)
+        eval_take = take if take is not None else min(
+            5000, args.batch_size * 200)
         val_ds = WorldTraceZipIterableDataset(
             args.hf_name,
             filename=args.worldtrace_file,
@@ -361,10 +464,17 @@ def build_dataloaders(args, take_override=None):
             local_path=args.worldtrace_local_path,
             seed=args.seed + 17,
         )
-        return make_dataloader(args, train_ds), make_dataloader(args, val_ds), make_dataloader(args, val_ds)
+        return make_dataloader(
+            args, train_ds), make_dataloader(
+            args, val_ds), make_dataloader(
+            args, val_ds)
 
 
-def mask_tokens(tokens: torch.Tensor, mask_indices: torch.Tensor, attention_mask: torch.Tensor, mask_id: int):
+def mask_tokens(
+        tokens: torch.Tensor,
+        mask_indices: torch.Tensor,
+        attention_mask: torch.Tensor,
+        mask_id: int):
     masked = tokens.clone()
     mask = torch.zeros_like(tokens, dtype=torch.bool)
     for b in range(tokens.shape[0]):
@@ -378,7 +488,11 @@ def mask_tokens(tokens: torch.Tensor, mask_indices: torch.Tensor, attention_mask
     return masked, mask
 
 
-def scheduled_ratio(step: int, min_ratio: float, max_ratio: float, curriculum_steps: int) -> float:
+def scheduled_ratio(
+        step: int,
+        min_ratio: float,
+        max_ratio: float,
+        curriculum_steps: int) -> float:
     lo = min(min_ratio, max_ratio)
     hi = max(min_ratio, max_ratio)
     if curriculum_steps <= 0:
@@ -400,11 +514,13 @@ def sample_mask_indices(
     for b in range(bsz):
         valid_len = int(attention_mask[b].sum().item())
         if valid_len <= 0:
-            idx = torch.empty((0,), dtype=torch.long, device=attention_mask.device)
+            idx = torch.empty((0,), dtype=torch.long,
+                              device=attention_mask.device)
             indices.append(idx)
             continue
         target = max(1, int(valid_len * mask_ratio))
-        selected = torch.zeros((valid_len,), dtype=torch.bool, device=attention_mask.device)
+        selected = torch.zeros(
+            (valid_len,), dtype=torch.bool, device=attention_mask.device)
         while int(selected.sum().item()) < target:
             remaining = target - int(selected.sum().item())
             if random.random() < span_mask_prob and valid_len > 2:
@@ -420,14 +536,18 @@ def sample_mask_indices(
         indices.append(idx)
         max_m = max(max_m, int(idx.shape[0]))
 
-    mask_idx = torch.full((bsz, max_m), -1, dtype=torch.long, device=attention_mask.device)
+    mask_idx = torch.full((bsz, max_m), -
+                          1, dtype=torch.long, device=attention_mask.device)
     for b, idx in enumerate(indices):
         if idx.numel() > 0:
             mask_idx[b, : idx.numel()] = idx
     return mask_idx
 
 
-def apply_coordinate_noise(coords: torch.Tensor, attention_mask: torch.Tensor, noise_std: float) -> torch.Tensor:
+def apply_coordinate_noise(
+        coords: torch.Tensor,
+        attention_mask: torch.Tensor,
+        noise_std: float) -> torch.Tensor:
     if noise_std <= 0:
         return coords
     noise = torch.randn_like(coords) * noise_std
@@ -437,7 +557,10 @@ def apply_coordinate_noise(coords: torch.Tensor, attention_mask: torch.Tensor, n
     return torch.stack([noisy_lat, noisy_lon], dim=-1)
 
 
-def masked_cross_entropy(logits: torch.Tensor, targets: torch.Tensor, mask: torch.Tensor):
+def masked_cross_entropy(
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        mask: torch.Tensor):
     # logits: [B, L, V], targets: [B, L], mask: [B, L]
     if mask.sum() == 0:
         return torch.tensor(0.0, device=logits.device)
@@ -449,7 +572,10 @@ def masked_cross_entropy(logits: torch.Tensor, targets: torch.Tensor, mask: torc
     return torch.nn.functional.cross_entropy(logits, targets)
 
 
-def masked_cross_entropy_weighted(logits: torch.Tensor, targets: torch.Tensor, mask: torch.Tensor):
+def masked_cross_entropy_weighted(
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        mask: torch.Tensor):
     if mask.sum() == 0:
         return torch.tensor(0.0, device=logits.device)
     valid = mask & (targets >= 0) & (targets < logits.shape[-1])
@@ -484,11 +610,15 @@ def heteroscedastic_dest_loss(
     return (precision * ce + log_var).mean()
 
 
-def build_micro_flows(step_to_region: torch.Tensor, attention_mask: torch.Tensor, region_mask: torch.Tensor):
+def build_micro_flows(
+        step_to_region: torch.Tensor,
+        attention_mask: torch.Tensor,
+        region_mask: torch.Tensor):
     # step_to_region: [B, L], region_mask: [B, R]
     bsz, seq_len = step_to_region.shape
     region_count = region_mask.shape[1]
-    flows = torch.zeros((bsz, region_count, region_count), device=step_to_region.device)
+    flows = torch.zeros((bsz, region_count, region_count),
+                        device=step_to_region.device)
     for b in range(bsz):
         valid_len = int(attention_mask[b].sum().item())
         if valid_len <= 1 or region_count == 0:
@@ -502,7 +632,10 @@ def build_micro_flows(step_to_region: torch.Tensor, attention_mask: torch.Tensor
     return flows
 
 
-def flow_consistency_loss(meso_logits: torch.Tensor, micro_flows: torch.Tensor, region_mask: torch.Tensor):
+def flow_consistency_loss(
+        meso_logits: torch.Tensor,
+        micro_flows: torch.Tensor,
+        region_mask: torch.Tensor):
     if micro_flows.numel() == 0:
         return torch.tensor(0.0, device=meso_logits.device)
     dest_mask = region_mask.unsqueeze(1)
@@ -518,7 +651,8 @@ def flow_consistency_loss(meso_logits: torch.Tensor, micro_flows: torch.Tensor, 
     return (diff * row_mask.float()).sum() / (row_mask.sum() + 1e-6)
 
 
-def compute_trip_features(coords: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+def compute_trip_features(coords: torch.Tensor,
+                          attention_mask: torch.Tensor) -> torch.Tensor:
     # coords: [B, L, 2], attention_mask: [B, L]
     deltas = coords[:, 1:] - coords[:, :-1]
     seg_dist = torch.sqrt((deltas**2).sum(dim=-1) + 1e-12)
@@ -534,14 +668,23 @@ def compute_trip_features(coords: torch.Tensor, attention_mask: torch.Tensor) ->
     step_idx = torch.cumsum(attention_mask, dim=1) - 1.0
     progress_step = (step_idx / denom_steps) * attention_mask
     progress_dist = (cum_dist / total_dist) * attention_mask
-    trip_len_log = torch.log1p(trip_len).expand_as(attention_mask) * attention_mask
-    total_dist_log = torch.log1p(total_dist).expand_as(attention_mask) * attention_mask
+    trip_len_log = torch.log1p(trip_len).expand_as(
+        attention_mask) * attention_mask
+    total_dist_log = torch.log1p(total_dist).expand_as(
+        attention_mask) * attention_mask
 
-    feats = torch.stack([progress_step, progress_dist, trip_len_log, total_dist_log], dim=-1)
+    feats = torch.stack([progress_step, progress_dist,
+                        trip_len_log, total_dist_log], dim=-1)
     return feats
 
 
-def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=None):
+def evaluate(
+        model,
+        tokenizer,
+        time_encoder,
+        dataloader,
+        args,
+        context_index=None):
     model.eval()
     total_token_loss = 0.0
     total_flow_loss = 0.0
@@ -556,7 +699,9 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
     total_batches = 0
     use_amp = args.amp and args.device.startswith("cuda")
     autocast_device = "cuda" if args.device.startswith("cuda") else "cpu"
-    autocast_dtype = torch.float16 if autocast_device == "cuda" else torch.bfloat16
+    autocast_dtype = (
+        torch.float16 if autocast_device == "cuda" else torch.bfloat16
+    )
     with torch.no_grad():
         for batch in dataloader:
             coords = batch["coords"].to(args.device)
@@ -571,7 +716,8 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
 
             context = None
             if context_index is not None:
-                context = context_tensor_from_index(context_index, coords, args.res1)
+                context = context_tensor_from_index(
+                    context_index, coords, args.res1)
 
             tokens_l0, tokens_l1, tokens_l2, vq_loss = tokenizer(
                 coords,
@@ -589,12 +735,20 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
             tokens_l1 = sanitize_targets(tokens_l1, args.vocab_l1)
             tokens_l2 = sanitize_targets(tokens_l2, args.vocab_l2)
 
-            masked_l0, mask = mask_tokens(tokens_l0, mask_indices, attention, args.vocab_l0)
-            masked_l1, _ = mask_tokens(tokens_l1, mask_indices, attention, args.vocab_l1)
-            masked_l2, _ = mask_tokens(tokens_l2, mask_indices, attention, args.vocab_l2)
-            trip_features = compute_trip_features(coords, attention) if args.use_trip_features else None
+            masked_l0, mask = mask_tokens(
+                tokens_l0, mask_indices, attention, args.vocab_l0)
+            masked_l1, _ = mask_tokens(
+                tokens_l1, mask_indices, attention, args.vocab_l1)
+            masked_l2, _ = mask_tokens(
+                tokens_l2, mask_indices, attention, args.vocab_l2)
+            trip_features = compute_trip_features(
+                coords, attention) if args.use_trip_features else None
 
-            with torch.autocast(device_type=autocast_device, dtype=autocast_dtype, enabled=use_amp):
+            with torch.autocast(
+                device_type=autocast_device,
+                dtype=autocast_dtype,
+                enabled=use_amp,
+            ):
                 time_embed = time_encoder(timestamps, attention)
                 outputs = model(
                     masked_l0,
@@ -613,24 +767,41 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
 
                 if args.length_weighted_loss:
                     token_loss = (
-                        masked_cross_entropy_weighted(outputs["step_logits"]["l0"], tokens_l0, mask)
-                        + masked_cross_entropy_weighted(outputs["step_logits"]["l1"], tokens_l1, mask)
-                        + masked_cross_entropy_weighted(outputs["step_logits"]["l2"], tokens_l2, mask)
-                    )
+                        masked_cross_entropy_weighted(
+                            outputs["step_logits"]["l0"],
+                            tokens_l0,
+                            mask) +
+                        masked_cross_entropy_weighted(
+                            outputs["step_logits"]["l1"],
+                            tokens_l1,
+                            mask) +
+                        masked_cross_entropy_weighted(
+                            outputs["step_logits"]["l2"],
+                            tokens_l2,
+                            mask))
                 else:
                     token_loss = (
-                        masked_cross_entropy(outputs["step_logits"]["l0"], tokens_l0, mask)
-                        + masked_cross_entropy(outputs["step_logits"]["l1"], tokens_l1, mask)
-                        + masked_cross_entropy(outputs["step_logits"]["l2"], tokens_l2, mask)
-                    )
+                        masked_cross_entropy(
+                            outputs["step_logits"]["l0"],
+                            tokens_l0,
+                            mask) +
+                        masked_cross_entropy(
+                            outputs["step_logits"]["l1"],
+                            tokens_l1,
+                            mask) +
+                        masked_cross_entropy(
+                            outputs["step_logits"]["l2"],
+                            tokens_l2,
+                            mask))
                 region_loss = (
                     masked_cross_entropy(
-                        outputs["region_logits"]["l1"], outputs["mid_ids"], outputs["mid_mlm_mask"]
-                    )
-                    + masked_cross_entropy(
-                        outputs["region_logits"]["l2"], outputs["coarse_ids"], outputs["coarse_mlm_mask"]
-                    )
-                )
+                        outputs["region_logits"]["l1"],
+                        outputs["mid_ids"],
+                        outputs["mid_mlm_mask"]) +
+                    masked_cross_entropy(
+                        outputs["region_logits"]["l2"],
+                        outputs["coarse_ids"],
+                        outputs["coarse_mlm_mask"]))
 
                 x_t, target_v, t = sample_rectified_flow_targets(coords)
                 pred_v = model.flow_head(outputs["step_hidden"], x_t, t)
@@ -638,25 +809,32 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
 
                 # destination loss (mid-level)
                 last_idx = attention.sum(dim=1).long() - 1
-                dest_targets = tokens_l1.gather(1, last_idx.unsqueeze(1)).squeeze(1)
+                dest_targets = tokens_l1.gather(
+                    1, last_idx.unsqueeze(1)).squeeze(1)
                 dest_loss = heteroscedastic_dest_loss(
                     outputs["dest_logits"],
                     dest_targets,
                     outputs["dest_log_var"],
                 )
 
-                micro_flows = build_micro_flows(outputs["step_to_mid"], attention, outputs["mid_mask"])
-                meso_logits = model.meso_flow_logits(outputs["mid_hidden"], outputs["mid_mask"])
-                consistency_loss = flow_consistency_loss(meso_logits, micro_flows, outputs["mid_mask"])
+                micro_flows = build_micro_flows(
+                    outputs["step_to_mid"], attention, outputs["mid_mask"])
+                meso_logits = model.meso_flow_logits(
+                    outputs["mid_hidden"], outputs["mid_mask"])
+                consistency_loss = flow_consistency_loss(
+                    meso_logits, micro_flows, outputs["mid_mask"])
 
             # token accuracy (all levels)
             if mask.sum() > 0:
                 preds_l0 = outputs["step_logits"]["l0"].argmax(dim=-1)
                 preds_l1 = outputs["step_logits"]["l1"].argmax(dim=-1)
                 preds_l2 = outputs["step_logits"]["l2"].argmax(dim=-1)
-                acc_l0 = (preds_l0[mask] == tokens_l0[mask]).float().mean().item()
-                acc_l1 = (preds_l1[mask] == tokens_l1[mask]).float().mean().item()
-                acc_l2 = (preds_l2[mask] == tokens_l2[mask]).float().mean().item()
+                acc_l0 = (preds_l0[mask] == tokens_l0[mask]
+                          ).float().mean().item()
+                acc_l1 = (preds_l1[mask] == tokens_l1[mask]
+                          ).float().mean().item()
+                acc_l2 = (preds_l2[mask] == tokens_l2[mask]
+                          ).float().mean().item()
             else:
                 acc_l0 = 0.0
                 acc_l1 = 0.0
@@ -666,9 +844,8 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
             dest_top1 = (dest_pred == dest_targets).float().mean().item()
             k = min(5, outputs["dest_logits"].shape[-1])
             dest_topk = outputs["dest_logits"].topk(k, dim=-1).indices
-            dest_top5 = (
-                (dest_topk == dest_targets.unsqueeze(-1)).any(dim=-1).float().mean().item()
-            )
+            dest_top5 = ((dest_topk == dest_targets.unsqueeze(-1)
+                          ).any(dim=-1).float().mean().item())
 
             total_token_loss += token_loss.item()
             total_flow_loss += flow_loss.item()
@@ -681,7 +858,10 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
             total_dest_top1 += dest_top1
             total_dest_top5 += dest_top5
             total_batches += 1
-            if args.max_eval_batches > 0 and total_batches >= args.max_eval_batches:
+            if (
+                args.max_eval_batches > 0
+                and total_batches >= args.max_eval_batches
+            ):
                 break
     if total_batches == 0:
         return {}
@@ -701,6 +881,8 @@ def evaluate(model, tokenizer, time_encoder, dataloader, args, context_index=Non
 
 def main():
     args = parse_args()
+    if args.length_balanced_loss:
+        args.length_weighted_loss = True
     os.makedirs("checkpoints", exist_ok=True)
     set_seed(args.seed)
     if args.cpu_threads and args.cpu_threads > 0:
@@ -733,10 +915,16 @@ def main():
         feature_dim = base_feature_dim + args.osm_context_dim
     else:
         feature_dim = base_feature_dim
-    tokenizer = HMTTokenizer(tokenizer_cfg, feature_dim=feature_dim, embed_dim=args.embed_dim).to(args.device)
+    tokenizer = HMTTokenizer(
+        tokenizer_cfg,
+        feature_dim=feature_dim,
+        embed_dim=args.embed_dim).to(
+        args.device)
     time_encoder = TimeFeatures(args.embed_dim).to(args.device)
 
-    macro_train_loader, macro_val_loader, macro_test_loader = build_macro_loaders(args)
+    macro_train_loader, macro_val_loader, macro_test_loader = (
+        build_macro_loaders(args)
+    )
 
     model = TrajectoryFMHMT(
         vocab_l0=args.vocab_l0,
@@ -768,10 +956,15 @@ def main():
         optim_params.extend(tok_params)
     if time_params:
         optim_params.extend(time_params)
-    optim = torch.optim.AdamW(optim_params, lr=args.lr, weight_decay=args.weight_decay)
+    optim = torch.optim.AdamW(
+        optim_params,
+        lr=args.lr,
+        weight_decay=args.weight_decay)
     use_amp = args.amp and args.device.startswith("cuda")
     autocast_device = "cuda" if args.device.startswith("cuda") else "cpu"
-    autocast_dtype = torch.float16 if autocast_device == "cuda" else torch.bfloat16
+    autocast_dtype = (
+        torch.float16 if autocast_device == "cuda" else torch.bfloat16
+    )
     if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
         scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
     else:
@@ -781,7 +974,8 @@ def main():
         warmup = max(1, args.warmup_steps)
         if current_step < warmup:
             return float(current_step + 1) / float(warmup)
-        progress = (current_step - warmup) / float(max(1, args.max_steps - warmup))
+        progress = (current_step - warmup) / \
+            float(max(1, args.max_steps - warmup))
         cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
         return args.min_lr_ratio + (1.0 - args.min_lr_ratio) * cosine
 
@@ -797,7 +991,8 @@ def main():
         model.load_state_dict(ckpt.get("model", {}), strict=False)
         tokenizer.load_state_dict(ckpt.get("tokenizer", {}), strict=False)
         if "time_encoder" in ckpt:
-            time_encoder.load_state_dict(ckpt.get("time_encoder", {}), strict=False)
+            time_encoder.load_state_dict(
+                ckpt.get("time_encoder", {}), strict=False)
         start_step = int(ckpt.get("step", 0))
         if args.resume_optimizer:
             if "optimizer" in ckpt:
@@ -808,16 +1003,24 @@ def main():
             scheduler.last_epoch = start_step - 1
 
     train_loader, val_loader, test_loader = build_dataloaders(args)
-    if hasattr(train_loader, "dataset") and hasattr(train_loader.dataset, "__len__"):
+    if hasattr(
+            train_loader,
+            "dataset") and hasattr(
+            train_loader.dataset,
+            "__len__"):
         try:
             print(
-                f"data_sizes train={len(train_loader.dataset)} val={len(val_loader.dataset)} test={len(test_loader.dataset)}"
+                "data_sizes "
+                f"train={len(train_loader.dataset)} "
+                f"val={len(val_loader.dataset)} "
+                f"test={len(test_loader.dataset)}"
             )
         except Exception:
             pass
 
     step = start_step
-    macro_iter = iter(macro_train_loader) if macro_train_loader is not None else None
+    macro_iter = iter(
+        macro_train_loader) if macro_train_loader is not None else None
 
     def next_macro_batch():
         nonlocal macro_iter
@@ -854,11 +1057,13 @@ def main():
                 span_lambda=args.span_lambda,
             )
 
-            coords_in = apply_coordinate_noise(coords, attention, args.coord_noise_std)
+            coords_in = apply_coordinate_noise(
+                coords, attention, args.coord_noise_std)
 
             context = None
             if context_index is not None:
-                context = context_tensor_from_index(context_index, coords_in, args.res1)
+                context = context_tensor_from_index(
+                    context_index, coords_in, args.res1)
 
             tokens_l0, tokens_l1, tokens_l2, vq_loss = tokenizer(
                 coords_in,
@@ -870,12 +1075,20 @@ def main():
             tokens_l1 = tokens_l1.to(args.device)
             tokens_l2 = tokens_l2.to(args.device)
 
-            masked_l0, mask = mask_tokens(tokens_l0, mask_indices, attention, args.vocab_l0)
-            masked_l1, _ = mask_tokens(tokens_l1, mask_indices, attention, args.vocab_l1)
-            masked_l2, _ = mask_tokens(tokens_l2, mask_indices, attention, args.vocab_l2)
-            trip_features = compute_trip_features(coords_in, attention) if args.use_trip_features else None
+            masked_l0, mask = mask_tokens(
+                tokens_l0, mask_indices, attention, args.vocab_l0)
+            masked_l1, _ = mask_tokens(
+                tokens_l1, mask_indices, attention, args.vocab_l1)
+            masked_l2, _ = mask_tokens(
+                tokens_l2, mask_indices, attention, args.vocab_l2)
+            trip_features = compute_trip_features(
+                coords_in, attention) if args.use_trip_features else None
 
-            with torch.autocast(device_type=autocast_device, dtype=autocast_dtype, enabled=use_amp):
+            with torch.autocast(
+                device_type=autocast_device,
+                dtype=autocast_dtype,
+                enabled=use_amp,
+            ):
                 time_embed = time_encoder(timestamps, attention)
                 outputs = model(
                     masked_l0,
@@ -894,39 +1107,60 @@ def main():
 
                 if args.length_weighted_loss:
                     token_loss = (
-                        masked_cross_entropy_weighted(outputs["step_logits"]["l0"], tokens_l0, mask)
-                        + masked_cross_entropy_weighted(outputs["step_logits"]["l1"], tokens_l1, mask)
-                        + masked_cross_entropy_weighted(outputs["step_logits"]["l2"], tokens_l2, mask)
-                    )
+                        masked_cross_entropy_weighted(
+                            outputs["step_logits"]["l0"],
+                            tokens_l0,
+                            mask) +
+                        masked_cross_entropy_weighted(
+                            outputs["step_logits"]["l1"],
+                            tokens_l1,
+                            mask) +
+                        masked_cross_entropy_weighted(
+                            outputs["step_logits"]["l2"],
+                            tokens_l2,
+                            mask))
                 else:
                     token_loss = (
-                        masked_cross_entropy(outputs["step_logits"]["l0"], tokens_l0, mask)
-                        + masked_cross_entropy(outputs["step_logits"]["l1"], tokens_l1, mask)
-                        + masked_cross_entropy(outputs["step_logits"]["l2"], tokens_l2, mask)
-                    )
+                        masked_cross_entropy(
+                            outputs["step_logits"]["l0"],
+                            tokens_l0,
+                            mask) +
+                        masked_cross_entropy(
+                            outputs["step_logits"]["l1"],
+                            tokens_l1,
+                            mask) +
+                        masked_cross_entropy(
+                            outputs["step_logits"]["l2"],
+                            tokens_l2,
+                            mask))
                 region_loss = (
                     masked_cross_entropy(
-                        outputs["region_logits"]["l1"], outputs["mid_ids"], outputs["mid_mlm_mask"]
-                    )
-                    + masked_cross_entropy(
-                        outputs["region_logits"]["l2"], outputs["coarse_ids"], outputs["coarse_mlm_mask"]
-                    )
-                )
+                        outputs["region_logits"]["l1"],
+                        outputs["mid_ids"],
+                        outputs["mid_mlm_mask"]) +
+                    masked_cross_entropy(
+                        outputs["region_logits"]["l2"],
+                        outputs["coarse_ids"],
+                        outputs["coarse_mlm_mask"]))
                 x_t, target_v, t = sample_rectified_flow_targets(coords)
                 pred_v = model.flow_head(outputs["step_hidden"], x_t, t)
                 flow_loss = flow_matching_loss(pred_v, target_v, attention)
 
                 last_idx = attention.sum(dim=1).long() - 1
-                dest_targets = tokens_l1.gather(1, last_idx.unsqueeze(1)).squeeze(1)
+                dest_targets = tokens_l1.gather(
+                    1, last_idx.unsqueeze(1)).squeeze(1)
                 dest_loss = heteroscedastic_dest_loss(
                     outputs["dest_logits"],
                     dest_targets,
                     outputs["dest_log_var"],
                 )
 
-                micro_flows = build_micro_flows(outputs["step_to_mid"], attention, outputs["mid_mask"])
-                meso_logits = model.meso_flow_logits(outputs["mid_hidden"], outputs["mid_mask"])
-                consistency_loss = flow_consistency_loss(meso_logits, micro_flows, outputs["mid_mask"])
+                micro_flows = build_micro_flows(
+                    outputs["step_to_mid"], attention, outputs["mid_mask"])
+                meso_logits = model.meso_flow_logits(
+                    outputs["mid_hidden"], outputs["mid_mask"])
+                consistency_loss = flow_consistency_loss(
+                    meso_logits, micro_flows, outputs["mid_mask"])
 
                 macro_loss = torch.tensor(0.0, device=args.device)
                 if (
@@ -936,7 +1170,8 @@ def main():
                 ):
                     macro_batch = next_macro_batch()
                     if macro_batch is not None:
-                        macro_loss = macro_batch_loss(model, time_encoder, macro_batch, args.device)
+                        macro_loss = macro_batch_loss(
+                            model, time_encoder, macro_batch, args.device)
 
                 loss = (
                     args.token_weight * token_loss
@@ -959,7 +1194,8 @@ def main():
                 if args.grad_clip > 0:
                     if use_amp:
                         scaler.unscale_(optim)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+                    torch.nn.utils.clip_grad_norm_(
+                        model.parameters(), args.grad_clip)
                 did_step = True
                 if use_amp:
                     scale_before = scaler.get_scale()
@@ -974,18 +1210,35 @@ def main():
 
                 if step % 20 == 0:
                     lr = optim.param_groups[0]["lr"]
-                    print(
-                        f"step={step} lr={lr:.2e} loss={loss.item():.4f} token={token_loss.item():.4f} "
-                        f"region={region_loss.item():.4f} flow={flow_loss.item():.4f} "
-                        f"cons={consistency_loss.item():.4f} dest={dest_loss.item():.4f} "
-                        f"vq={vq_loss.detach().item():.4f} macro={macro_loss.item():.4f} "
+                    msg = (
+                        f"step={step} lr={lr:.2e} "
+                        f"loss={loss.item():.4f} "
+                        f"token={token_loss.item():.4f} "
+                        f"region={region_loss.item():.4f} "
+                        f"flow={flow_loss.item():.4f} "
+                        f"cons={consistency_loss.item():.4f} "
+                        f"dest={dest_loss.item():.4f} "
+                        f"vq={vq_loss.detach().item():.4f} "
+                        f"macro={macro_loss.item():.4f} "
                         f"mask_ratio={mask_ratio:.3f} "
                         f"region_mask_ratio={region_mask_ratio:.3f}"
                     )
+                    print(
+                        msg
+                    )
 
                 if step > 0 and step % args.eval_interval == 0:
-                    metrics = evaluate(model, tokenizer, time_encoder, val_loader, args, context_index)
-                    if macro_val_loader is not None and model.macro_head is not None:
+                    metrics = evaluate(
+                        model,
+                        tokenizer,
+                        time_encoder,
+                        val_loader,
+                        args,
+                        context_index)
+                    if (
+                        macro_val_loader is not None
+                        and model.macro_head is not None
+                    ):
                         metrics["macro_kl"] = evaluate_macro(
                             model,
                             time_encoder,
@@ -1005,7 +1258,10 @@ def main():
                         "step": step,
                         "args": vars(args),
                     }
-                    torch.save(ckpt, Path("checkpoints") / f"{args.ckpt_prefix}_step_{step}.pt")
+                    torch.save(
+                        ckpt,
+                        Path("checkpoints") /
+                        f"{args.ckpt_prefix}_step_{step}.pt")
 
                 step += 1
                 if step >= args.max_steps:
@@ -1022,11 +1278,18 @@ def main():
         "step": step,
         "args": vars(args),
     }
-    final_ckpt_path = Path("checkpoints") / f"{args.ckpt_prefix}_final_step_{step}.pt"
+    final_ckpt_path = Path("checkpoints") / \
+        f"{args.ckpt_prefix}_final_step_{step}.pt"
     torch.save(final_ckpt, final_ckpt_path)
     print(f"saved_final_checkpoint={final_ckpt_path}")
 
-    val_metrics = evaluate(model, tokenizer, time_encoder, val_loader, args, context_index)
+    val_metrics = evaluate(
+        model,
+        tokenizer,
+        time_encoder,
+        val_loader,
+        args,
+        context_index)
     if macro_val_loader is not None and model.macro_head is not None:
         val_metrics["macro_kl"] = evaluate_macro(
             model,
@@ -1035,7 +1298,13 @@ def main():
             args.device,
             max_batches=args.macro_eval_batches,
         )
-    test_metrics = evaluate(model, tokenizer, time_encoder, test_loader, args, context_index)
+    test_metrics = evaluate(
+        model,
+        tokenizer,
+        time_encoder,
+        test_loader,
+        args,
+        context_index)
     if macro_test_loader is not None and model.macro_head is not None:
         test_metrics["macro_kl"] = evaluate_macro(
             model,

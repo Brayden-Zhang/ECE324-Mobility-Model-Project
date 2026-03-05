@@ -32,17 +32,21 @@ fi
 
 LOCAL_DATA="${LOCAL_DATA:-${ROOT_DIR}/data/worldtrace_sample.pkl}"
 JOB_ID="${SLURM_JOB_ID:-local}"
+SPLIT_MODE="${SPLIT_MODE:-all}"
+TASK="${TASK:-both}"
 
 echo "=== UniTraj Regression Eval ==="
 echo "Checkpoint: ${CKPT_PATH}"
 echo "Data: ${LOCAL_DATA}"
+echo "Split mode: ${SPLIT_MODE}"
+echo "Task: ${TASK}"
 
 # Regression-based eval (primary - fair comparison with UniTraj)
 python scripts/run_unitraj_eval.py \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
-  --split_mode random \
-  --task both \
+  --split_mode "${SPLIT_MODE}" \
+  --task "${TASK}" \
   --use_regression \
   --regression_epochs 10 \
   --regression_lr 2e-3 \
@@ -52,8 +56,9 @@ python scripts/run_unitraj_eval.py \
 python scripts/run_unitraj_eval.py \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
-  --split_mode random \
-  --task both \
+  --split_mode "${SPLIT_MODE}" \
+  --task "${TASK}" \
+  --no-use_regression \
   --exclude_unknown \
   --centroid_level l2 \
   --output "${ROOT_DIR}/cache/unitraj_eval_l2_excl_${JOB_ID}.json"
@@ -62,8 +67,8 @@ python scripts/run_unitraj_eval.py \
 python scripts/run_unitraj_eval.py \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
-  --split_mode random \
-  --task both \
+  --split_mode "${SPLIT_MODE}" \
+  --task "${TASK}" \
   --use_regression \
   --coord_noise_std_m 30 \
   --input_drop_ratio 0.2 \

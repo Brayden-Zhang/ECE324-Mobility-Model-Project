@@ -25,12 +25,17 @@ MAX_POINTS = 600
 MIN_SAMPLING_RATIO = 0.35
 
 
-def logarithmic_sampling_ratio(length, min_points=MIN_POINTS, max_points=MAX_POINTS, min_ratio=MIN_SAMPLING_RATIO):
+def logarithmic_sampling_ratio(
+        length,
+        min_points=MIN_POINTS,
+        max_points=MAX_POINTS,
+        min_ratio=MIN_SAMPLING_RATIO):
     if length <= min_points:
         return 1.0
     if length >= max_points:
         return min_ratio
-    ratio = 1.0 - math.log(length - min_points + 1) / math.log(max_points - min_points + 1) * (1.0 - min_ratio)
+    ratio = 1.0 - math.log(length - min_points + 1) / \
+        math.log(max_points - min_points + 1) * (1.0 - min_ratio)
     return max(ratio, min_ratio)
 
 
@@ -50,7 +55,8 @@ def safe_parse_times(times: List) -> np.ndarray:
         ts = arr.astype("datetime64[ns]").astype(np.int64) / 1e9
         return ts.astype(np.float32)
 
-    # Vectorized datetime parsing for object/string arrays (much faster than per-row parsing).
+    # Vectorized datetime parsing for object/string arrays (much faster than
+    # per-row parsing).
     try:
         import pandas as pd
 
@@ -74,25 +80,97 @@ def safe_parse_times(times: List) -> np.ndarray:
         return np.asarray(parsed, dtype=np.float32)
 
 
+def _is_valid_latlon(lat: np.ndarray, lon: np.ndarray) -> bool:
+    finite = np.isfinite(lat) & np.isfinite(lon)
+    if finite.sum() == 0:
+        return False
+    lat_f = lat[finite]
+    lon_f = lon[finite]
+    return float(
+        np.max(
+            np.abs(lat_f))) <= 90.0 and float(
+        np.max(
+            np.abs(lon_f))) <= 180.0
+
+
+def _haversine_np(lat1, lon1, lat2, lon2) -> np.ndarray:
+    lat1_r = np.deg2rad(lat1)
+    lon1_r = np.deg2rad(lon1)
+    lat2_r = np.deg2rad(lat2)
+    lon2_r = np.deg2rad(lon2)
+    dlat = lat2_r - lat1_r
+    dlon = lon2_r - lon1_r
+    a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1_r) * \
+        np.cos(lat2_r) * np.sin(dlon / 2.0) ** 2
+    c = 2.0 * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+    return 6371000.0 * c
+
+
+def _orientation_score(lat: np.ndarray, lon: np.ndarray) -> float:
+    finite = np.isfinite(lat) & np.isfinite(lon)
+    if finite.sum() < 2:
+        return float("inf")
+    lat = lat[finite]
+    lon = lon[finite]
+    if lat.shape[0] > 256:
+        idx = np.linspace(
+            0,
+            lat.shape[0] - 1,
+            num=256,
+            endpoint=True).round().astype(
+            np.int64)
+        lat = lat[idx]
+        lon = lon[idx]
+    step_d = _haversine_np(lat[:-1], lon[:-1], lat[1:], lon[1:])
+    if step_d.size == 0:
+        return float("inf")
+    med = float(np.median(step_d))
+    p90 = float(np.percentile(step_d, 90))
+    mx = float(np.max(step_d))
+    lat95 = float(np.percentile(np.abs(lat), 95))
+    polar_penalty = max(0.0, lat95 - 75.0) * 5000.0
+    return med + 0.25 * p90 + 0.02 * mx + polar_penalty
+
+
 def normalize_lon_lat(points: List) -> Tuple[np.ndarray, np.ndarray]:
-    # points are [lat, lon] or [lon, lat]. Heuristic on range.
+    # points may be [lat, lon] or [lon, lat], and real datasets can be mixed.
     arr = np.asarray(points, dtype=np.float32)
     if arr.ndim != 2 or arr.shape[1] < 2:
         raise ValueError("trajectory must be a list of [lat, lon] pairs")
-    lat = arr[:, 0]
-    lon = arr[:, 1]
-    if np.any(np.abs(lat) > 90) and np.any(np.abs(lon) <= 90):
-        lat, lon = lon, lat
-    return lat, lon
+
+    lat_a, lon_a = arr[:, 0], arr[:, 1]
+    lat_b, lon_b = arr[:, 1], arr[:, 0]
+
+    valid_a = _is_valid_latlon(lat_a, lon_a)
+    valid_b = _is_valid_latlon(lat_b, lon_b)
+    if valid_a and not valid_b:
+        return lat_a, lon_a
+    if valid_b and not valid_a:
+        return lat_b, lon_b
+    if not valid_a and not valid_b:
+        return lat_a, lon_a
+
+    score_a = _orientation_score(lat_a, lon_a)
+    score_b = _orientation_score(lat_b, lon_b)
+    if score_b + 1e-6 < score_a * 0.8:
+        return lat_b, lon_b
+    return lat_a, lon_a
 
 
 class TrajectoryProcessor:
     def __init__(self, max_len: int, mask_ratio: float):
         self.max_len = max_len
         self.mask_ratio = mask_ratio
-        self.sampling_ratios = [logarithmic_sampling_ratio(length) for length in range(MIN_POINTS, MAX_POINTS + 1)]
+        self.sampling_ratios = [
+            logarithmic_sampling_ratio(length) for length in range(
+                MIN_POINTS, MAX_POINTS + 1)]
 
-    def resample(self, lat: np.ndarray, lon: np.ndarray, times: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def resample(self,
+                 lat: np.ndarray,
+                 lon: np.ndarray,
+                 times: np.ndarray) -> Tuple[np.ndarray,
+                                             np.ndarray,
+                                             np.ndarray]:
         length = len(lat)
         if length == 0:
             return lat, lon, times
@@ -124,11 +202,14 @@ class TrajectoryProcessor:
         times = times[idx]
         return lat, lon, times
 
-    def pad_or_truncate(self, arr: np.ndarray, fill: float = 0.0) -> Tuple[np.ndarray, np.ndarray]:
+    def pad_or_truncate(self, arr: np.ndarray,
+                        fill: float = 0.0) -> Tuple[np.ndarray, np.ndarray]:
         length = len(arr)
         if length >= self.max_len:
-            return arr[: self.max_len], np.ones((self.max_len,), dtype=np.float32)
-        padded = np.full((self.max_len,) + arr.shape[1:], fill, dtype=arr.dtype)
+            return arr[: self.max_len], np.ones(
+                (self.max_len,), dtype=np.float32)
+        padded = np.full((self.max_len,) +
+                         arr.shape[1:], fill, dtype=arr.dtype)
         padded[:length] = arr
         mask = np.zeros((self.max_len,), dtype=np.float32)
         mask[:length] = 1.0
@@ -155,17 +236,30 @@ class WorldTraceMapDataset(Dataset):
 
     def __getitem__(self, idx):
         rec = self.samples[idx]
-        return materialize_sample(rec["lat"], rec["lon"], rec["times"], self.proc)
+        return materialize_sample(
+            rec["lat"],
+            rec["lon"],
+            rec["times"],
+            self.proc)
 
 
 class WorldTraceIterableDataset(IterableDataset):
-    def __init__(self, hf_name: str, split: str, max_len: int, mask_ratio: float, shuffle_buffer: int = 1000, take: Optional[int] = None):
+    def __init__(
+            self,
+            hf_name: str,
+            split: str,
+            max_len: int,
+            mask_ratio: float,
+            shuffle_buffer: int = 1000,
+            take: Optional[int] = None):
         if load_dataset is None:
             raise RuntimeError(
-                "HF streaming requires `datasets` + `pyarrow`. Install both or load system Arrow (e.g., `module load arrow/21.0.0`)."
+                "HF streaming requires `datasets` + `pyarrow`. Install both "
+                "or load system Arrow (e.g., `module load arrow/21.0.0`)."
             )
         self.dataset = load_dataset(hf_name, split=split, streaming=True)
-        self.dataset = self.dataset.shuffle(buffer_size=shuffle_buffer, seed=42)
+        self.dataset = self.dataset.shuffle(
+            buffer_size=shuffle_buffer, seed=42)
         self.take = take
         self.proc = TrajectoryProcessor(max_len, mask_ratio)
 
@@ -184,7 +278,8 @@ class WorldTraceIterableDataset(IterableDataset):
                 break
 
 
-def _pick_column(columns_lower: Dict[str, str], names: List[str]) -> Optional[str]:
+def _pick_column(columns_lower: Dict[str, str],
+                 names: List[str]) -> Optional[str]:
     for name in names:
         if name in columns_lower:
             return columns_lower[name]
@@ -214,17 +309,22 @@ class WorldTraceZipIterableDataset(IterableDataset):
     def _resolve_source(self, local_path: str) -> str:
         if local_path:
             if not os.path.exists(local_path):
-                raise FileNotFoundError(f"WorldTrace source not found: {local_path}")
+                raise FileNotFoundError(
+                    f"WorldTrace source not found: {local_path}")
             if os.path.isdir(local_path):
                 candidate = os.path.join(local_path, self.filename)
                 if os.path.exists(candidate):
                     return candidate
                 raise FileNotFoundError(
-                    f"WorldTrace source directory does not contain {self.filename}: {local_path}"
+                    "WorldTrace source directory does not contain "
+                    f"{self.filename}: {local_path}"
                 )
             return local_path
         if hf_hub_download is None:
-            raise RuntimeError("huggingface_hub is required to download WorldTrace zip/csv files")
+            raise RuntimeError(
+                "huggingface_hub is required to download WorldTrace zip/csv "
+                "files"
+            )
         cache_dir = os.environ.get("HUGGINGFACE_HUB_CACHE")
         if not cache_dir:
             hf_home = os.environ.get("HF_HOME")
@@ -240,8 +340,16 @@ class WorldTraceZipIterableDataset(IterableDataset):
     def _record_from_csv_handle(self, csv_handle) -> Optional[dict]:
         import pandas as pd
 
-        keep_cols = {"time", "timestamp", "datetime", "latitude", "longitude", "lat", "lon"}
-        df = pd.read_csv(csv_handle, usecols=lambda c: str(c).strip().lower() in keep_cols)
+        keep_cols = {
+            "time",
+            "timestamp",
+            "datetime",
+            "latitude",
+            "longitude",
+            "lat",
+            "lon"}
+        df = pd.read_csv(csv_handle, usecols=lambda c: str(
+            c).strip().lower() in keep_cols)
         if len(df) < 2:
             return None
 
@@ -258,7 +366,8 @@ class WorldTraceZipIterableDataset(IterableDataset):
             times = np.arange(len(df), dtype=np.float32)
         else:
             times = df[time_col].tolist()
-        return {"trajectory": np.stack([lat, lon], axis=-1).tolist(), "time": times}
+        return {"trajectory": np.stack(
+            [lat, lon], axis=-1).tolist(), "time": times}
 
     def _iter_raw_records(self):
         path = self.source_path
@@ -270,7 +379,8 @@ class WorldTraceZipIterableDataset(IterableDataset):
             return
 
         if not path.lower().endswith(".zip"):
-            raise ValueError(f"Unsupported WorldTrace file: {path}. Expected .zip or .csv")
+            raise ValueError(
+                f"Unsupported WorldTrace file: {path}. Expected .zip or .csv")
 
         with zipfile.ZipFile(path, "r") as zf:
             for info in zf.infolist():
@@ -331,7 +441,11 @@ def process_record(record: dict, proc: TrajectoryProcessor):
     prepared = prepare_record(record)
     if prepared is None:
         return None
-    return materialize_sample(prepared["lat"], prepared["lon"], prepared["times"], proc)
+    return materialize_sample(
+        prepared["lat"],
+        prepared["lon"],
+        prepared["times"],
+        proc)
 
 
 def prepare_record(record: dict):
@@ -373,7 +487,11 @@ def prepare_record(record: dict):
     }
 
 
-def materialize_sample(lat: np.ndarray, lon: np.ndarray, times: np.ndarray, proc: TrajectoryProcessor):
+def materialize_sample(
+        lat: np.ndarray,
+        lon: np.ndarray,
+        times: np.ndarray,
+        proc: TrajectoryProcessor):
     lat, lon, times = proc.resample(lat, lon, times)
     coords = np.stack([lat, lon], axis=-1).astype(np.float32)
     intervals = np.zeros_like(times, dtype=np.float32)

@@ -18,14 +18,25 @@ from utils.unitraj import UniTraj  # noqa: E402
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="UniTraj external eval on local WorldTrace-format data")
+    parser = argparse.ArgumentParser(
+        description="UniTraj external eval on local WorldTrace-format data")
     parser.add_argument("--data_path", type=str, required=True)
     parser.add_argument("--checkpoint", type=str, default="")
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--task", type=str, default="both", choices=["both", "recovery", "prediction"])
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--task",
+        type=str,
+        default="both",
+        choices=[
+            "both",
+            "recovery",
+            "prediction"])
     parser.add_argument("--mask_ratio", type=float, default=0.5)
     parser.add_argument("--pred_steps", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
@@ -43,7 +54,8 @@ def _haversine_m(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     lon2 = target[:, 1] * deg2rad
     dlat = lat2 - lat1
     dlon = lon2 - lon1
-    a = torch.sin(dlat / 2) ** 2 + torch.cos(lat1) * torch.cos(lat2) * torch.sin(dlon / 2) ** 2
+    a = torch.sin(dlat / 2) ** 2 + torch.cos(lat1) * \
+        torch.cos(lat2) * torch.sin(dlon / 2) ** 2
     c = 2 * torch.asin(torch.clamp(a.sqrt(), max=1.0))
     return 6371000.0 * c
 
@@ -73,19 +85,27 @@ def _build_mask_indices(
             num = max(1, int(vlen * mask_ratio)) if vlen > 0 else 1
             num = min(num, m)
             if vlen > 0:
-                perm = torch.randperm(vlen, generator=generator, device=attention.device).tolist()
+                perm = torch.randperm(
+                    vlen,
+                    generator=generator,
+                    device=attention.device).tolist()
                 idx = perm[:num]
             else:
                 idx = []
             if num < m:
                 remaining = [i for i in range(max_len) if i not in idx]
-                extra = np.random.choice(remaining, size=m - num, replace=False).tolist()
+                extra = np.random.choice(
+                    remaining, size=m - num, replace=False).tolist()
                 idx.extend(extra)
-        indices[b] = torch.tensor(idx, dtype=torch.long, device=attention.device)
+        indices[b] = torch.tensor(
+            idx, dtype=torch.long, device=attention.device)
     return indices
 
 
-def _unnormalize(traj: torch.Tensor, original: torch.Tensor, transform: Normalize) -> torch.Tensor:
+def _unnormalize(
+        traj: torch.Tensor,
+        original: torch.Tensor,
+        transform: Normalize) -> torch.Tensor:
     # traj: [B, 2, L]
     out = traj.clone()
     if transform is not None:
@@ -97,7 +117,8 @@ def _unnormalize(traj: torch.Tensor, original: torch.Tensor, transform: Normaliz
     return out
 
 
-def evaluate(loader: DataLoader, model: UniTraj, transform: Normalize, args, task: str) -> Tuple[float, float, int]:
+def evaluate(loader: DataLoader, model: UniTraj, transform: Normalize,
+             args, task: str) -> Tuple[float, float, int]:
     device = args.device
     total_abs = 0.0
     total_sq = 0.0
@@ -127,7 +148,11 @@ def evaluate(loader: DataLoader, model: UniTraj, transform: Normalize, args, tas
         true_coords = _unnormalize(traj, original, transform)
 
         # gather masked points
-        mask = torch.zeros((traj.shape[0], args.max_len), dtype=torch.bool, device=device)
+        mask = torch.zeros(
+            (traj.shape[0],
+             args.max_len),
+            dtype=torch.bool,
+            device=device)
         for b in range(mask.shape[0]):
             mask[b, indices[b]] = True
         mask = mask & attention.bool()
@@ -170,13 +195,25 @@ def main():
 
     model.eval()
     transform = Normalize()
-    dataset = TrajectoryDataset(data_path=args.data_path, max_len=args.max_len, transform=transform)
-    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
+    dataset = TrajectoryDataset(
+        data_path=args.data_path,
+        max_len=args.max_len,
+        transform=transform)
+    loader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers)
 
     tasks = ["recovery", "prediction"] if args.task == "both" else [args.task]
     results = {
         "checkpoint": args.checkpoint,
         "dataset": args.data_path,
+        "coord_order": {
+            "trajectory_tensor_order": "lon_lat",
+            "distance_metric_assumed_order": "lat_lon",
+            "normalized_output_order": "legacy_unitraj_external",
+        },
         "settings": {
             "max_len": args.max_len,
             "mask_ratio": args.mask_ratio,

@@ -26,3 +26,17 @@ slurm-*.out
 
 # Docs (local notes/drafts)
 /docs/
+
+# Optional extension modules not in paper scope
+train_geosight.py
+train_metabolic.py
+train_privamove.py
+train_socialmob.py
+utils/geosight.py
+utils/metabolic.py
+utils/privamove.py
+utils/socialmob.py
+scripts/slurm_train_geosight.sh
+scripts/slurm_train_metabolic.sh
+scripts/slurm_train_privamove.sh
+scripts/slurm_train_socialmob.sh

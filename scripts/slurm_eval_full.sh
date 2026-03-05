@@ -62,6 +62,7 @@ python scripts/run_unitraj_eval.py \
   --split_mode "${SPLIT_MODE:-both}" \
   --task both \
   --exclude_unknown \
+  --use_regression \
   --output "${ROOT_DIR}/cache/unitraj_eval_${JOB_ID}.json"
 
 python scripts/run_unitraj_eval.py \
@@ -70,6 +71,7 @@ python scripts/run_unitraj_eval.py \
   --split_mode "${SPLIT_MODE:-both}" \
   --task both \
   --exclude_unknown \
+  --use_regression \
   --coord_noise_std_m 30 \
   --input_drop_ratio 0.2 \
   --output "${ROOT_DIR}/cache/unitraj_eval_robust_${JOB_ID}.json"
