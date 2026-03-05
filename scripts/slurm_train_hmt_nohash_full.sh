@@ -51,6 +51,18 @@ DEPTH="${DEPTH:-8}"
 HEADS="${HEADS:-8}"
 DROPOUT="${DROPOUT:-0.0}"
 STEP_ATTENTION_WINDOW="${STEP_ATTENTION_WINDOW:-0}"
+
+# Optional stronger graph preset for better long-range structure modeling.
+# Enable with: STRONG_GRAPH_PRESET=1 sbatch scripts/slurm_train_hmt_nohash_full.sh
+if [[ "${STRONG_GRAPH_PRESET:-0}" == "1" ]]; then
+  GRAPH_LAYERS="${GRAPH_LAYERS:-4}"
+  GRAPH_KNN="${GRAPH_KNN:-16}"
+  GRAPH_TEMPORAL_WINDOW="${GRAPH_TEMPORAL_WINDOW:-4}"
+  STEP_ATTENTION_WINDOW="${STEP_ATTENTION_WINDOW:-64}"
+  SPACE_TIME_ENCODER="${SPACE_TIME_ENCODER:-1}"
+  SPACE_TIME_FREQS="${SPACE_TIME_FREQS:-8}"
+fi
+
 SPACE_TIME_ARGS=()
 if [[ "${SPACE_TIME_ENCODER:-0}" == "1" ]]; then
   SPACE_TIME_ARGS=(--space_time_encoder --space_time_freqs "${SPACE_TIME_FREQS:-6}")
