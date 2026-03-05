@@ -26,6 +26,7 @@ import run_benchmarks as rb  # noqa: E402
 @dataclass
 class EvalResult:
     mae_m: float
+    mse_m2: float
     rmse_m: float
     n: int
     n_total: int = 0
@@ -111,6 +112,15 @@ def _distance_m(pred: torch.Tensor, target: torch.Tensor, coord_mode: str) -> to
     if coord_mode == "meters":
         return _euclidean_m(pred, target)
     return _haversine_m(pred, target)
+
+
+def _distance_stats(d: torch.Tensor) -> Tuple[float, float, float]:
+    if d.numel() == 0:
+        return 0.0, 0.0, 0.0
+    mse = float((d**2).mean().item())
+    mae = float(d.mean().item())
+    rmse = float(math.sqrt(mse))
+    return mae, mse, rmse
 
 
 def _apply_coord_noise(coords: torch.Tensor, attention: torch.Tensor, std_m: float, generator: torch.Generator) -> torch.Tensor:
@@ -390,10 +400,11 @@ def evaluate_task(
         total_n += int(d.numel())
 
     if total_n == 0:
-        return EvalResult(mae_m=0.0, rmse_m=0.0, n=0, n_total=total_mask)
+        return EvalResult(mae_m=0.0, mse_m2=0.0, rmse_m=0.0, n=0, n_total=total_mask)
     mae = total_abs / total_n
-    rmse = math.sqrt(total_sq / total_n)
-    return EvalResult(mae_m=mae, rmse_m=rmse, n=total_n, n_total=total_mask)
+    mse = total_sq / total_n
+    rmse = math.sqrt(mse)
+    return EvalResult(mae_m=mae, mse_m2=mse, rmse_m=rmse, n=total_n, n_total=total_mask)
 
 
 # --------------- Regression-based evaluation (avoids centroid/vocab issues) ---------------
@@ -480,6 +491,7 @@ def _train_regression_head(
 
     best_state = None
     best_val = float("inf")
+    warned_empty_val = False
     for _ in range(max(1, epochs)):
         perm = torch.randperm(train_x.shape[0], device=device)
         train_x = train_x[perm]
@@ -493,7 +505,13 @@ def _train_regression_head(
             loss.backward()
             opt.step()
         with torch.no_grad():
-            val_loss = torch.nn.functional.mse_loss(head(val_x), val_yn).item()
+            if val_x.shape[0] > 0:
+                val_loss = torch.nn.functional.mse_loss(head(val_x), val_yn).item()
+            else:
+                if not warned_empty_val:
+                    print("[unitraj_eval] warning: empty regression validation set; selecting head by training loss.")
+                    warned_empty_val = True
+                val_loss = torch.nn.functional.mse_loss(head(train_x), train_yn).item()
             if val_loss < best_val:
                 best_val = val_loss
                 best_state = {k: v.cpu().clone() for k, v in head.state_dict().items()}
@@ -546,7 +564,7 @@ def evaluate_task_regression(
     print(f"  [regression] train={train_x.shape[0]} val={val_x.shape[0]} test={test_x.shape[0]}")
 
     if train_x.shape[0] == 0 or test_x.shape[0] == 0:
-        empty = EvalResult(mae_m=0.0, rmse_m=0.0, n=0).__dict__
+        empty = EvalResult(mae_m=0.0, mse_m2=0.0, rmse_m=0.0, n=0).__dict__
         return {"train": empty, "val": empty, "test": empty}
 
     head = _train_regression_head(
@@ -561,9 +579,8 @@ def evaluate_task_regression(
     for split_name, sx, sy in [("train", train_x, train_y), ("val", val_x, val_y), ("test", test_x, test_y)]:
         pred = _predict_with_head(head, sx, args.device)
         d = _distance_m(pred, sy, coord_mode)
-        mae = float(d.mean().item()) if d.numel() > 0 else 0.0
-        rmse = float(torch.sqrt((d ** 2).mean()).item()) if d.numel() > 0 else 0.0
-        results[split_name] = EvalResult(mae_m=mae, rmse_m=rmse, n=int(d.numel())).__dict__
+        mae, mse, rmse = _distance_stats(d)
+        results[split_name] = EvalResult(mae_m=mae, mse_m2=mse, rmse_m=rmse, n=int(d.numel())).__dict__
 
     return results
 

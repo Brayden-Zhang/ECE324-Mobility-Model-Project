@@ -97,7 +97,7 @@ def _unnormalize(traj: torch.Tensor, original: torch.Tensor, transform: Normaliz
     return out
 
 
-def evaluate(loader: DataLoader, model: UniTraj, transform: Normalize, args, task: str) -> Tuple[float, float, int]:
+def evaluate(loader: DataLoader, model: UniTraj, transform: Normalize, args, task: str) -> Tuple[float, float, float, int]:
     device = args.device
     total_abs = 0.0
     total_sq = 0.0
@@ -142,10 +142,11 @@ def evaluate(loader: DataLoader, model: UniTraj, transform: Normalize, args, tas
         total_n += int(d.numel())
 
     if total_n == 0:
-        return 0.0, 0.0, 0
+        return 0.0, 0.0, 0.0, 0
     mae = total_abs / total_n
-    rmse = math.sqrt(total_sq / total_n)
-    return mae, rmse, total_n
+    mse = total_sq / total_n
+    rmse = math.sqrt(mse)
+    return mae, mse, rmse, total_n
 
 
 def main():
@@ -185,9 +186,9 @@ def main():
         "metrics": {},
     }
     for task in tasks:
-        mae, rmse, n = evaluate(loader, model, transform, args, task)
-        print(f"{task}: mae_m={mae:.2f} rmse_m={rmse:.2f} n={n}")
-        results["metrics"][task] = {"mae_m": mae, "rmse_m": rmse, "n": n}
+        mae, mse, rmse, n = evaluate(loader, model, transform, args, task)
+        print(f"{task}: mae_m={mae:.2f} mse_m2={mse:.2f} rmse_m={rmse:.2f} n={n}")
+        results["metrics"][task] = {"mae_m": mae, "mse_m2": mse, "rmse_m": rmse, "n": n}
 
     if args.output:
         out = Path(args.output)
