@@ -3,6 +3,7 @@ import json
 import math
 import os
 import random
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -11,17 +12,22 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 
-from utils.hmt import HMTConfig, HMTTokenizer, TimeFeatures
-from utils.hmt_dataset import (
+REPO_ROOT = Path(__file__).resolve().parent
+SRC_DIR = REPO_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from route_rangers.models.hmt import HMTConfig, HMTTokenizer, TimeFeatures
+from route_rangers.data.hmt_dataset import (
     WorldTraceIterableDataset,
     WorldTraceMapDataset,
     WorldTraceZipIterableDataset,
     collate_batch,
 )
-from utils.hmt_model import TrajectoryFMHMT
-from utils.flow import sample_rectified_flow_targets, flow_matching_loss
-from utils.context import OSMContextIndex, context_tensor_from_index
-from utils.macro_dataset import MacroDistributionDataset
+from route_rangers.models.hmt_model import TrajectoryFMHMT
+from route_rangers.models.flow import sample_rectified_flow_targets, flow_matching_loss
+from route_rangers.data.context import OSMContextIndex, context_tensor_from_index
+from route_rangers.data.macro_dataset import MacroDistributionDataset
 
 
 def parse_args():

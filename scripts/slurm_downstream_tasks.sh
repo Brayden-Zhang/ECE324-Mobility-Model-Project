@@ -16,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
-[[ -f "${ROOT_DIR}/scripts/run_travel_time_estimation.py" ]] || ROOT_DIR="${FALLBACK_ROOT}"
+[[ -f "${ROOT_DIR}/src/route_rangers/cli/run_travel_time_estimation.py" ]] || ROOT_DIR="${FALLBACK_ROOT}"
 cd "${ROOT_DIR}"
 
 module load arrow/21.0.0
@@ -40,7 +40,7 @@ echo ""
 
 # ---- Travel Time Estimation ----
 echo ">>> Travel Time Estimation"
-python scripts/run_travel_time_estimation.py \
+PYTHONPATH=src python -m route_rangers.cli.run_travel_time_estimation \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --prefix_ratios 0.25 0.50 0.75 1.00 \
@@ -53,7 +53,7 @@ echo ""
 
 # ---- Anomaly Detection ----
 echo ">>> Anomaly Detection"
-python scripts/run_anomaly_detection.py \
+PYTHONPATH=src python -m route_rangers.cli.run_anomaly_detection \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --contamination_ratio 0.1 \
@@ -64,7 +64,7 @@ echo ""
 
 # ---- Trip Classification ----
 echo ">>> Trip Classification"
-python scripts/run_trip_classification.py \
+PYTHONPATH=src python -m route_rangers.cli.run_trip_classification \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --probe_epochs "${PROBE_EPOCHS:-10}" \
@@ -76,7 +76,7 @@ echo ""
 
 # ---- Similarity Retrieval ----
 echo ">>> Similarity Retrieval"
-python scripts/run_similarity_retrieval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_similarity_retrieval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --top_k 10 \

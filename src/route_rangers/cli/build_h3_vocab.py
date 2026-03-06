@@ -7,11 +7,11 @@ from typing import Iterable, Optional
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from utils.hmt_dataset import WorldTraceZipIterableDataset, prepare_record  # noqa: E402
+from route_rangers.data.hmt_dataset import WorldTraceZipIterableDataset, prepare_record  # noqa: E402
 
 try:
     import h3

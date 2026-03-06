@@ -11,7 +11,6 @@ to predict a scalar (duration) using a lightweight linear head.
 import argparse
 import json
 import math
-import sys
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -19,12 +18,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
-
-import run_benchmarks as rb  # noqa: E402
+from route_rangers.cli import run_benchmarks as rb
 
 
 def parse_args():

@@ -18,7 +18,7 @@ if [[ -z "${CKPT}" ]]; then
   exit 1
 fi
 
-python scripts/run_macro_eval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_macro_eval \
   --checkpoint "${CKPT}" \
   --macro_data "data/hdx/movement-distribution/processed/movement_distribution_12m_monthly.npz" \
   --batch_size 512 \

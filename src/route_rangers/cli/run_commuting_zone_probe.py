@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
-import run_benchmarks as rb
+from route_rangers.cli import run_benchmarks as rb
 
 
 def parse_args():

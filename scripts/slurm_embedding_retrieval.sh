@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
 
-if [[ ! -f "${ROOT_DIR}/scripts/run_embedding_retrieval.py" ]]; then
+if [[ ! -f "${ROOT_DIR}/src/route_rangers/cli/run_embedding_retrieval.py" ]]; then
   ROOT_DIR="${FALLBACK_ROOT}"
 fi
 cd "${ROOT_DIR}"
@@ -47,7 +47,7 @@ LOCAL_DATA="${LOCAL_DATA:-${ROOT_DIR}/data/worldtrace_sample.pkl}"
 OUTPUT="${OUTPUT:-${ROOT_DIR}/cache/embedding_retrieval_${SLURM_JOB_ID}.json}"
 OUTPUT="${OUTPUT//%j/${SLURM_JOB_ID}}"
 
-python scripts/run_embedding_retrieval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_embedding_retrieval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --output "${OUTPUT}" \

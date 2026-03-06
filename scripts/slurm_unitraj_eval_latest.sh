@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
 
-if [[ ! -f "${ROOT_DIR}/scripts/run_unitraj_eval.py" ]]; then
+if [[ ! -f "${ROOT_DIR}/src/route_rangers/cli/run_unitraj_eval.py" ]]; then
   ROOT_DIR="${FALLBACK_ROOT}"
 fi
 cd "${ROOT_DIR}"
@@ -46,7 +46,7 @@ fi
 name="$(basename "${CKPT_PATH}" .pt)"
 out="${ROOT_DIR}/cache/unitraj_eval_${name}_${SLURM_JOB_ID}.json"
 
-python scripts/run_unitraj_eval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --split_mode "${SPLIT_MODE}" \

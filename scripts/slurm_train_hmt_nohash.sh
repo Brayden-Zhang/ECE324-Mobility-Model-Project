@@ -48,7 +48,7 @@ if [[ "${SPACE_TIME_ENCODER:-0}" == "1" ]]; then
   SPACE_TIME_ARGS=(--space_time_encoder --space_time_freqs "${SPACE_TIME_FREQS:-6}")
 fi
 
-python scripts/build_h3_vocab.py \
+PYTHONPATH=src python -m route_rangers.cli.build_h3_vocab \
   --local_data "${VOCAB_DATA}" \
   --res0 "${RES0:-9}" \
   --res1 "${RES1:-7}" \

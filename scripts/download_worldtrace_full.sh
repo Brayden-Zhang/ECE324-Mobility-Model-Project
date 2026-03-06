@@ -44,7 +44,7 @@ if [[ ! -f "${WT_ZIP}" ]]; then
   exit 1
 fi
 
-python scripts/build_h3_vocab.py \
+PYTHONPATH=src python -m route_rangers.cli.build_h3_vocab \
   --data_mode hf_zip \
   --hf_name "OpenTrace/WorldTrace" \
   --worldtrace_file "Trajectory.zip" \

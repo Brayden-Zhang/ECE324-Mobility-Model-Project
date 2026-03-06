@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
 
-if [[ ! -f "${ROOT_DIR}/scripts/run_benchmarks.py" ]]; then
+if [[ ! -f "${ROOT_DIR}/src/route_rangers/cli/run_benchmarks.py" ]]; then
   ROOT_DIR="${FALLBACK_ROOT}"
 fi
 cd "${ROOT_DIR}"
@@ -47,7 +47,7 @@ if [[ "${DISABLE_GRAPH_BENCHMARK:-0}" == "1" ]]; then
   DISABLE_GRAPH_ARGS=(--disable_graph)
 fi
 
-python scripts/run_benchmarks.py \
+PYTHONPATH=src python -m route_rangers.cli.run_benchmarks \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --output "${OUTPUT}" \

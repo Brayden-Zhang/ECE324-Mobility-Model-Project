@@ -134,7 +134,7 @@ if [[ "${RUN_BENCHMARKS:-1}" == "1" ]]; then
   if [[ "${BENCH_DISABLE_GRAPH:-0}" == "1" ]]; then
     BENCH_GRAPH_ARGS=(--disable_graph)
   fi
-  python scripts/run_benchmarks.py \
+  PYTHONPATH=src python -m route_rangers.cli.run_benchmarks \
     --checkpoint "${CKPT_PATH}" \
     --local_data "${BENCH_DATA}" \
     --output "${BENCH_OUT}" \

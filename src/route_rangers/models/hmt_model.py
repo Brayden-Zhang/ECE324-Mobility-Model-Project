@@ -4,10 +4,10 @@ from typing import Optional, Dict
 import torch
 from torch import nn
 
-from utils.flow import FlowMatchingHead
-from utils.hmt_backbone import GraphTrajectoryEncoder, MaskedTransformer
-from utils.hmt_hierarchy import HMTEncoder, RegionTokenBuilder
-from utils.spacetime import SpaceTimeEncoder
+from route_rangers.models.flow import FlowMatchingHead
+from route_rangers.models.hmt_backbone import GraphTrajectoryEncoder, MaskedTransformer
+from route_rangers.models.hmt_hierarchy import HMTEncoder, RegionTokenBuilder
+from route_rangers.models.spacetime import SpaceTimeEncoder
 
 
 def masked_mean(x: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
