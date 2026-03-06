@@ -56,7 +56,7 @@ echo ">>> Anomaly Detection"
 PYTHONPATH=src python -m route_rangers.cli.run_anomaly_detection \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
-  --contamination_ratio 0.1 \
+  --anomaly_ratio 0.1 \
   --batch_size "${BATCH_SIZE:-32}" \
   --max_len "${MAX_LEN:-200}" \
   --output "${ROOT_DIR}/cache/anomaly_detection_${JOB_ID}.json"
