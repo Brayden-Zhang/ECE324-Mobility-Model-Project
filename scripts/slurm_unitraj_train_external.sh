@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
 
-if [[ ! -f "${ROOT_DIR}/scripts/unitraj/train_unitraj.py" ]]; then
+if [[ ! -f "${ROOT_DIR}/src/route_rangers/cli/unitraj/train_unitraj.py" ]]; then
   ROOT_DIR="${FALLBACK_ROOT}"
 fi
 cd "${ROOT_DIR}"
@@ -36,7 +36,7 @@ export PYTHONUNBUFFERED=1
 DATA_PATH="${DATA_PATH:-${ROOT_DIR}/data/worldtrace_sample.pkl}"
 OUTPUT_DIR="${OUTPUT_DIR:-${ROOT_DIR}/external/unitraj/outputs}"
 
-python scripts/unitraj/train_unitraj.py \
+PYTHONPATH=src python -m route_rangers.cli.unitraj.train_unitraj \
   --data_path "${DATA_PATH}" \
   --output_dir "${OUTPUT_DIR}" \
   --max_len "${MAX_LEN:-200}" \

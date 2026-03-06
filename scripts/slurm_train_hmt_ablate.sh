@@ -50,7 +50,7 @@ if [[ "${HASH_TOKENS:-0}" == "1" ]]; then
   TOKEN_ARGS+=(--hash_tokens)
 else
   if [[ ! -f "${H3_VOCAB}" ]]; then
-    python scripts/build_h3_vocab.py \
+    PYTHONPATH=src python -m route_rangers.cli.build_h3_vocab \
       --data_mode hf_zip \
       --hf_name "${HF_NAME:-OpenTrace/WorldTrace}" \
       --worldtrace_file "${WORLDTRACE_FILE:-Trajectory.zip}" \

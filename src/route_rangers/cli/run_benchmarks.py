@@ -1,6 +1,6 @@
-from utils.hmt_model import TrajectoryFMHMT
-from utils.hmt import HMTConfig, HMTTokenizer, TimeFeatures
-from utils.context import OSMContextIndex, context_tensor_from_index
+from route_rangers.models.hmt_model import TrajectoryFMHMT
+from route_rangers.models.hmt import HMTConfig, HMTTokenizer, TimeFeatures
+from route_rangers.data.context import OSMContextIndex, context_tensor_from_index
 import argparse
 import json
 import random
@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 

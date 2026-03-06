@@ -17,7 +17,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
-[[ -f "${ROOT_DIR}/scripts/run_unitraj_eval.py" ]] || ROOT_DIR="${FALLBACK_ROOT}"
+[[ -f "${ROOT_DIR}/src/route_rangers/cli/run_unitraj_eval.py" ]] || ROOT_DIR="${FALLBACK_ROOT}"
 cd "${ROOT_DIR}"
 
 module load arrow/21.0.0
@@ -42,7 +42,7 @@ echo "Split mode: ${SPLIT_MODE}"
 echo "Task: ${TASK}"
 
 # Regression-based eval (primary - fair comparison with UniTraj)
-python scripts/run_unitraj_eval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --split_mode "${SPLIT_MODE}" \
@@ -53,7 +53,7 @@ python scripts/run_unitraj_eval.py \
   --output "${ROOT_DIR}/cache/unitraj_eval_regression_${JOB_ID}.json"
 
 # Also run with exclude_unknown and H3 centroids for comparison
-python scripts/run_unitraj_eval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --split_mode "${SPLIT_MODE}" \
@@ -64,7 +64,7 @@ python scripts/run_unitraj_eval.py \
   --output "${ROOT_DIR}/cache/unitraj_eval_l2_excl_${JOB_ID}.json"
 
 # Robust eval with regression
-python scripts/run_unitraj_eval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --split_mode "${SPLIT_MODE}" \

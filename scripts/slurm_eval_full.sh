@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
 
-if [[ ! -f "${ROOT_DIR}/scripts/run_benchmarks.py" ]]; then
+if [[ ! -f "${ROOT_DIR}/src/route_rangers/cli/run_benchmarks.py" ]]; then
   ROOT_DIR="${FALLBACK_ROOT}"
 fi
 cd "${ROOT_DIR}"
@@ -44,7 +44,7 @@ MACRO_DATA="${MACRO_DATA:-${ROOT_DIR}/data/hdx/movement-distribution/processed/m
 CZ_CSV="${CZ_CSV:-${ROOT_DIR}/data/hdx/commuting-zones/data-for-good-at-meta-commuting-zones-march-2023.csv}"
 JOB_ID="${SLURM_JOB_ID}"
 
-python scripts/run_benchmarks.py \
+PYTHONPATH=src python -m route_rangers.cli.run_benchmarks \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --output "${ROOT_DIR}/cache/benchmark_${JOB_ID}.json" \
@@ -56,7 +56,7 @@ python scripts/run_benchmarks.py \
   --max_probe_points "${MAX_PROBE_POINTS:-200000}" \
   --split_mode "${SPLIT_MODE:-both}"
 
-python scripts/run_unitraj_eval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --split_mode "${SPLIT_MODE:-both}" \
@@ -65,7 +65,7 @@ python scripts/run_unitraj_eval.py \
   --use_regression \
   --output "${ROOT_DIR}/cache/unitraj_eval_${JOB_ID}.json"
 
-python scripts/run_unitraj_eval.py \
+PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --split_mode "${SPLIT_MODE:-both}" \
@@ -76,14 +76,14 @@ python scripts/run_unitraj_eval.py \
   --input_drop_ratio 0.2 \
   --output "${ROOT_DIR}/cache/unitraj_eval_robust_${JOB_ID}.json"
 
-python scripts/run_data_efficiency.py \
+PYTHONPATH=src python -m route_rangers.cli.run_data_efficiency \
   --checkpoint "${CKPT_PATH}" \
   --local_data "${LOCAL_DATA}" \
   --fractions 0.05 0.1 0.2 0.5 1.0 \
   --output "${ROOT_DIR}/cache/unitraj_data_efficiency_${JOB_ID}.json"
 
 if [[ -f "${MACRO_DATA}" ]]; then
-  python scripts/run_macro_eval.py \
+  PYTHONPATH=src python -m route_rangers.cli.run_macro_eval \
     --checkpoint "${CKPT_PATH}" \
     --macro_data "${MACRO_DATA}" \
     --batch_size "${MACRO_BATCH_SIZE:-512}" \
@@ -91,7 +91,7 @@ if [[ -f "${MACRO_DATA}" ]]; then
 fi
 
 if [[ -f "${CZ_CSV}" ]]; then
-  python scripts/run_commuting_zone_probe.py \
+  PYTHONPATH=src python -m route_rangers.cli.run_commuting_zone_probe \
     --checkpoint "${CKPT_PATH}" \
     --local_data "${LOCAL_DATA}" \
     --cz_csv "${CZ_CSV}" \
@@ -99,13 +99,13 @@ if [[ -f "${CZ_CSV}" ]]; then
 fi
 
 if [[ -n "${TRANSFER_DATASETS:-}" ]]; then
-  python scripts/run_transfer_suite.py \
+  PYTHONPATH=src python -m route_rangers.cli.run_transfer_suite \
     --checkpoint "${CKPT_PATH}" \
     --datasets ${TRANSFER_DATASETS} \
     --output "${ROOT_DIR}/cache/unitraj_transfer_suite_${JOB_ID}.json"
 fi
 
-python scripts/model_stats.py \
+PYTHONPATH=src python -m route_rangers.cli.model_stats \
   --checkpoint "${CKPT_PATH}" \
   --batch_size "${STAT_BATCH_SIZE:-16}" \
   --max_len "${MAX_LEN:-200}" \

@@ -14,7 +14,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FALLBACK_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ROOT_DIR="${SLURM_SUBMIT_DIR:-${FALLBACK_ROOT}}"
-[[ -f "${ROOT_DIR}/scripts/compare_unitraj_results.py" ]] || ROOT_DIR="${FALLBACK_ROOT}"
+[[ -f "${ROOT_DIR}/src/route_rangers/cli/compare_unitraj_results.py" ]] || ROOT_DIR="${FALLBACK_ROOT}"
 cd "${ROOT_DIR}"
 
 if [[ -f "${ROOT_DIR}/.venv/bin/activate" ]]; then
@@ -43,7 +43,7 @@ echo "UniTraj JSON: ${UNITRAJ_JSON}"
 echo "Mode: ${MODE}, Split: ${SPLIT}"
 echo "Output: ${OUT_CSV}"
 
-python scripts/compare_unitraj_results.py \
+PYTHONPATH=src python -m route_rangers.cli.compare_unitraj_results \
   --hmt "${HMT_JSON}" \
   --unitraj "${UNITRAJ_JSON}" \
   --mode "${MODE}" \

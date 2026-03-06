@@ -11,12 +11,12 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.run_benchmarks import FixedTrajectoryDataset, collate_fixed, load_backbone, load_local_data  # noqa: E402
-from scripts.run_benchmarks import forward_backbone  # noqa: E402
+from route_rangers.cli.run_benchmarks import FixedTrajectoryDataset, collate_fixed, load_backbone, load_local_data  # noqa: E402
+from route_rangers.cli.run_benchmarks import forward_backbone  # noqa: E402
 
 
 def parse_args():

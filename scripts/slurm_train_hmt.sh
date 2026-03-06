@@ -50,7 +50,7 @@ OSM_CONTEXT_PATH="${OSM_CONTEXT_PATH:-${ROOT_DIR}/data/osm_context.json}"
 OSM_ARGS=()
 if [[ "${BUILD_OSM_CONTEXT:-0}" == "1" && ! -f "${OSM_CONTEXT_PATH}" ]]; then
   module load proj/9.4.1 || true
-  python scripts/build_osm_context.py \
+  PYTHONPATH=src python -m route_rangers.cli.build_osm_context \
     --north "${OSM_NORTH:-40.9}" \
     --south "${OSM_SOUTH:-40.4}" \
     --east "${OSM_EAST:--73.7}" \
@@ -122,7 +122,7 @@ if [[ "${RUN_BENCHMARKS:-0}" == "1" ]]; then
   if [[ "${BENCH_DISABLE_GRAPH:-0}" == "1" ]]; then
     BENCH_GRAPH_ARGS=(--disable_graph)
   fi
-  python scripts/run_benchmarks.py \
+  PYTHONPATH=src python -m route_rangers.cli.run_benchmarks \
     --checkpoint "${CKPT_PATH}" \
     --local_data "${BENCH_DATA}" \
     --output "${BENCH_OUT}" \

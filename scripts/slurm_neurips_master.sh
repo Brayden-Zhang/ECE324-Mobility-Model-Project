@@ -176,7 +176,7 @@ fi
 echo ""
 echo "── Post-processing ──"
 echo "After all jobs complete, run:"
-echo "  python scripts/collect_results.py"
+echo "  PYTHONPATH=src python -m route_rangers.cli.collect_results"
 echo ""
 echo "=========================================="
 echo "  Pipeline submitted!"

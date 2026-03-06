@@ -6,8 +6,8 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-import run_benchmarks as rb
-from utils.macro_dataset import MacroDistributionDataset
+from route_rangers.cli import run_benchmarks as rb
+from route_rangers.data.macro_dataset import MacroDistributionDataset
 
 
 def parse_args():

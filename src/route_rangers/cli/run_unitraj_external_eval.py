@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 UNITRAJ_ROOT = ROOT / "external" / "unitraj"
 if str(UNITRAJ_ROOT) not in sys.path:
     sys.path.insert(0, str(UNITRAJ_ROOT))
