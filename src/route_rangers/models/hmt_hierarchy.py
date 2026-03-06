@@ -50,7 +50,11 @@ class HMTEncoder(nn.Module):
         context: Optional[torch.Tensor] = None,
         trip_features: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        h = self.embed_l0(tokens_l0) + self.embed_l1(tokens_l1) + self.embed_l2(tokens_l2)
+        h = (
+            self.embed_l0(tokens_l0)
+            + self.embed_l1(tokens_l1)
+            + self.embed_l2(tokens_l2)
+        )
         h = h + self.time_mlp(time_embed)
         if context is not None and self.context_mlp is not None:
             h = h + self.context_mlp(context)
@@ -102,9 +106,13 @@ class RegionTokenBuilder(nn.Module):
             step_to_region_list.append(step_to_region)
             max_regions = max(max_regions, len(region_ids))
 
-        region_ids = torch.full((bsz, max_regions), self.pad_id, device=device, dtype=torch.long)
+        region_ids = torch.full(
+            (bsz, max_regions), self.pad_id, device=device, dtype=torch.long
+        )
         region_mask = torch.zeros((bsz, max_regions), device=device, dtype=torch.bool)
-        region_agg = torch.zeros((bsz, max_regions, embed_dim), device=step_embed.device)
+        region_agg = torch.zeros(
+            (bsz, max_regions, embed_dim), device=step_embed.device
+        )
 
         for b in range(bsz):
             ids = region_ids_list[b]
@@ -118,7 +126,9 @@ class RegionTokenBuilder(nn.Module):
             for idx, steps in enumerate(region_steps_list[b]):
                 if not steps:
                     continue
-                step_idx = torch.tensor(steps, device=step_embed.device, dtype=torch.long)
+                step_idx = torch.tensor(
+                    steps, device=step_embed.device, dtype=torch.long
+                )
                 agg[idx] = step_emb.index_select(0, step_idx).mean(dim=0)
             region_agg[b, :count] = agg
 

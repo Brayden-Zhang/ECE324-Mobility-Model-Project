@@ -8,6 +8,7 @@ or random point swaps) should produce embeddings far from the normal cluster.
 
 Metrics: AUROC and PR-AUC for distinguishing normal vs anomalous trajectories.
 """
+
 import argparse
 import json
 import math
@@ -27,10 +28,14 @@ def parse_args():
     parser.add_argument("--local_data", type=str, required=True)
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=2000)
-    parser.add_argument("--anomaly_ratio", type=float, default=0.2, help="Fraction of trajs to corrupt")
+    parser.add_argument(
+        "--anomaly_ratio", type=float, default=0.2, help="Fraction of trajs to corrupt"
+    )
     parser.add_argument("--output", type=str, default="")
     return parser.parse_args()
 
@@ -40,9 +45,13 @@ def masked_mean(x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     return (x * m).sum(dim=1) / m.sum(dim=1).clamp(min=1.0)
 
 
-def create_anomalous_batch(batch: dict, anomaly_type: str, rng: np.random.RandomState) -> dict:
+def create_anomalous_batch(
+    batch: dict, anomaly_type: str, rng: np.random.RandomState
+) -> dict:
     """Create anomalous versions of a trajectory batch."""
-    new_batch = {k: v.clone() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+    new_batch = {
+        k: v.clone() if isinstance(v, torch.Tensor) else v for k, v in batch.items()
+    }
     coords = new_batch["coords"].clone()
     attention = new_batch["attention_mask"]
 
@@ -57,7 +66,9 @@ def create_anomalous_batch(batch: dict, anomaly_type: str, rng: np.random.Random
             vlen = int(attention[b].sum().item())
             if vlen > 1:
                 coords[b, :vlen] = coords[b, :vlen].flip(0)
-                new_batch["timestamps"][b, :vlen] = new_batch["timestamps"][b, :vlen].flip(0)
+                new_batch["timestamps"][b, :vlen] = new_batch["timestamps"][
+                    b, :vlen
+                ].flip(0)
     elif anomaly_type == "swap":
         # Randomly swap 30% of points
         bsz = coords.shape[0]
@@ -69,7 +80,10 @@ def create_anomalous_batch(batch: dict, anomaly_type: str, rng: np.random.Random
             idx = rng.choice(vlen, size=n_swap * 2, replace=True)
             for i in range(0, len(idx) - 1, 2):
                 a, b_idx = int(idx[i]), int(idx[i + 1])
-                coords[b, a], coords[b, b_idx] = coords[b, b_idx].clone(), coords[b, a].clone()
+                coords[b, a], coords[b, b_idx] = (
+                    coords[b, b_idx].clone(),
+                    coords[b, a].clone(),
+                )
     elif anomaly_type == "detour":
         # Shift middle 30% of trajectory by ~2km
         bsz = coords.shape[0]
@@ -96,7 +110,11 @@ def collect_embeddings(
     embeddings = []
     for batch in loader:
         outputs, _, _, _, attention = rb.forward_backbone(
-            batch, pack, device=device, max_len=max_len, mask=None,
+            batch,
+            pack,
+            device=device,
+            max_len=max_len,
+            mask=None,
         )
         pooled = masked_mean(outputs["step_hidden"], attention).detach().cpu()
         embeddings.append(pooled)
@@ -123,14 +141,20 @@ def collect_anomalous_embeddings(
             "start_ts": anom_batch["start_ts"],
         }
         outputs, _, _, _, attention = rb.forward_backbone(
-            anom_batch_dev, pack, device=device, max_len=max_len, mask=None,
+            anom_batch_dev,
+            pack,
+            device=device,
+            max_len=max_len,
+            mask=None,
         )
         pooled = masked_mean(outputs["step_hidden"], attention).detach().cpu()
         embeddings.append(pooled)
     return torch.cat(embeddings, dim=0)
 
 
-def compute_anomaly_scores(normal_emb: torch.Tensor, test_emb: torch.Tensor) -> torch.Tensor:
+def compute_anomaly_scores(
+    normal_emb: torch.Tensor, test_emb: torch.Tensor
+) -> torch.Tensor:
     """Compute anomaly score as distance from mean normal embedding."""
     centroid = normal_emb.mean(dim=0, keepdim=True)
     dists = torch.sqrt(((test_emb - centroid) ** 2).sum(dim=-1))
@@ -140,6 +164,7 @@ def compute_anomaly_scores(normal_emb: torch.Tensor, test_emb: torch.Tensor) -> 
 def compute_metrics(scores: np.ndarray, labels: np.ndarray) -> Dict[str, float]:
     """Compute AUROC and PR-AUC."""
     from sklearn.metrics import roc_auc_score, average_precision_score
+
     auroc = float(roc_auc_score(labels, scores))
     prauc = float(average_precision_score(labels, scores))
     return {"auroc": auroc, "pr_auc": prauc}
@@ -150,20 +175,32 @@ def main():
     rb.set_seed(args.seed)
     rng = np.random.RandomState(args.seed)
 
-    pack = rb.load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = rb.load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
     raw_records = rb.load_local_data(args.local_data)
-    dataset = rb.FixedTrajectoryDataset(raw_records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = rb.FixedTrajectoryDataset(
+        raw_records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
 
-    train_idx, val_idx, test_idx = rb.split_indices(dataset, mode="random", seed=args.seed)
+    train_idx, val_idx, test_idx = rb.split_indices(
+        dataset, mode="random", seed=args.seed
+    )
 
     # Get normal embeddings from train set
     train_loader = DataLoader(
         torch.utils.data.Subset(dataset, train_idx),
-        batch_size=args.batch_size, shuffle=False, num_workers=0, collate_fn=rb.collate_fixed,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=rb.collate_fixed,
     )
     test_loader = DataLoader(
         torch.utils.data.Subset(dataset, test_idx),
-        batch_size=args.batch_size, shuffle=False, num_workers=0, collate_fn=rb.collate_fixed,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=rb.collate_fixed,
     )
 
     print("[anomaly] Computing normal train embeddings...")
@@ -184,15 +221,22 @@ def main():
     for atype in anomaly_types:
         print(f"[anomaly] Computing {atype} anomalous embeddings...")
         test_emb_anom = collect_anomalous_embeddings(
-            test_loader, pack, args.device, args.max_len, atype, rng,
+            test_loader,
+            pack,
+            args.device,
+            args.max_len,
+            atype,
+            rng,
         )
 
         # Normal test gets label 0, anomalous gets label 1
         all_emb = torch.cat([test_emb_normal, test_emb_anom], dim=0)
-        labels = np.concatenate([
-            np.zeros(test_emb_normal.shape[0]),
-            np.ones(test_emb_anom.shape[0]),
-        ])
+        labels = np.concatenate(
+            [
+                np.zeros(test_emb_normal.shape[0]),
+                np.ones(test_emb_anom.shape[0]),
+            ]
+        )
 
         scores = compute_anomaly_scores(normal_emb, all_emb).numpy()
         metrics = compute_metrics(scores, labels)
@@ -203,19 +247,28 @@ def main():
     all_anom_embs = []
     for atype in anomaly_types:
         anom_emb = collect_anomalous_embeddings(
-            test_loader, pack, args.device, args.max_len, atype, rng,
+            test_loader,
+            pack,
+            args.device,
+            args.max_len,
+            atype,
+            rng,
         )
         all_anom_embs.append(anom_emb)
     combined_anom = torch.cat(all_anom_embs, dim=0)
     # Subsample to match normal test size
     if combined_anom.shape[0] > test_emb_normal.shape[0]:
-        idx = rng.choice(combined_anom.shape[0], size=test_emb_normal.shape[0], replace=False)
+        idx = rng.choice(
+            combined_anom.shape[0], size=test_emb_normal.shape[0], replace=False
+        )
         combined_anom = combined_anom[idx]
     all_emb = torch.cat([test_emb_normal, combined_anom], dim=0)
-    labels = np.concatenate([
-        np.zeros(test_emb_normal.shape[0]),
-        np.ones(combined_anom.shape[0]),
-    ])
+    labels = np.concatenate(
+        [
+            np.zeros(test_emb_normal.shape[0]),
+            np.ones(combined_anom.shape[0]),
+        ]
+    )
     scores = compute_anomaly_scores(normal_emb, all_emb).numpy()
     combined_metrics = compute_metrics(scores, labels)
     results["combined"] = combined_metrics

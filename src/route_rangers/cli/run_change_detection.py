@@ -15,7 +15,12 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from route_rangers.cli.run_benchmarks import FixedTrajectoryDataset, collate_fixed, load_backbone, load_local_data  # noqa: E402
+from route_rangers.cli.run_benchmarks import (  # noqa: E402
+    FixedTrajectoryDataset,
+    collate_fixed,
+    load_backbone,
+    load_local_data,
+)
 from route_rangers.cli.run_benchmarks import forward_backbone, masked_mean  # noqa: E402
 
 
@@ -26,12 +31,18 @@ def parse_args():
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=1000)
-    parser.add_argument("--split_ratio", type=float, default=0.5, help="fraction for prefix vs suffix")
-    # Default name matches scripts/collect_results.py glob: cache/change_detection_*.json
-    parser.add_argument("--output", type=str, default="cache/change_detection_latest.json")
+    parser.add_argument(
+        "--split_ratio", type=float, default=0.5, help="fraction for prefix vs suffix"
+    )
+    # Default name matches collect_results.py glob: cache/change_detection_*.json
+    parser.add_argument(
+        "--output", type=str, default="cache/change_detection_latest.json"
+    )
     return parser.parse_args()
 
 
@@ -63,9 +74,13 @@ def main():
     if not Path(args.local_data).exists():
         raise FileNotFoundError(f"local_data not found: {args.local_data}")
 
-    pack = load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
     records = load_local_data(args.local_data)
-    dataset = FixedTrajectoryDataset(records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = FixedTrajectoryDataset(
+        records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
     if len(dataset) < 10:
         raise RuntimeError(f"not enough samples for change detection: {len(dataset)}")
 
@@ -90,12 +105,16 @@ def main():
 
         prefix_batch = dict(batch)
         prefix_batch["attention_mask"] = attention * prefix_mask.float()
-        outputs_p, _, _, _, att_p = forward_backbone(prefix_batch, pack, device=args.device, max_len=args.max_len, mask=None)
+        outputs_p, _, _, _, att_p = forward_backbone(
+            prefix_batch, pack, device=args.device, max_len=args.max_len, mask=None
+        )
         prefix_embs.append(masked_mean(outputs_p["step_hidden"], att_p).detach().cpu())
 
         suffix_batch = dict(batch)
         suffix_batch["attention_mask"] = attention * suffix_mask.float()
-        outputs_s, _, _, _, att_s = forward_backbone(suffix_batch, pack, device=args.device, max_len=args.max_len, mask=None)
+        outputs_s, _, _, _, att_s = forward_backbone(
+            suffix_batch, pack, device=args.device, max_len=args.max_len, mask=None
+        )
         suffix_embs.append(masked_mean(outputs_s["step_hidden"], att_s).detach().cpu())
 
     prefix = torch.cat(prefix_embs, dim=0)

@@ -8,9 +8,13 @@ from typing import Dict, List, Optional, Tuple
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Collect latest experiment results into markdown.")
+    parser = argparse.ArgumentParser(
+        description="Collect latest experiment results into markdown."
+    )
     parser.add_argument("--cache_dir", type=str, default="cache")
-    parser.add_argument("--foundation_doc", type=str, default="docs/foundation_evals.md")
+    parser.add_argument(
+        "--foundation_doc", type=str, default="docs/foundation_evals.md"
+    )
     parser.add_argument("--paper_doc", type=str, default="docs/neurips_paper_draft.md")
     return parser.parse_args()
 
@@ -56,7 +60,9 @@ def summarize_benchmarks(cache_dir: str) -> Tuple[str, List[Dict[str, str]]]:
     header = "| run | recon@l1 | next@top1 | dest@top1 |\n|---|---|---|---|"
     lines = [header]
     for r in rows:
-        lines.append(f"| {r['name']} | {r['recon_l1']} | {r['next_top1']} | {r['dest_top1']} |")
+        lines.append(
+            f"| {r['name']} | {r['recon_l1']} | {r['next_top1']} | {r['dest_top1']} |"
+        )
     return "\n".join(lines), rows
 
 
@@ -80,7 +86,9 @@ def _pick_metric(task: dict) -> dict:
     return task
 
 
-def summarize_unitraj_eval(cache_dir: str, pattern: str, label: str, exclude_substr: Optional[str] = None) -> str:
+def summarize_unitraj_eval(
+    cache_dir: str, pattern: str, label: str, exclude_substr: Optional[str] = None
+) -> str:
     files = latest_files(os.path.join(cache_dir, pattern))
     if exclude_substr:
         files = [f for f in files if exclude_substr not in Path(f).name]
@@ -102,7 +110,9 @@ def summarize_unitraj_eval(cache_dir: str, pattern: str, label: str, exclude_sub
                 if "n_total" in t and t["n_total"]:
                     coverage = f", coverage={t.get('n', 0) / max(1, t['n_total']):.3f}"
                 lines.append(
-                    f"- {task}: mae_m={t.get('mae_m', 0.0):.1f}, rmse_m={t.get('rmse_m', 0.0):.1f}, n={t.get('n', 0)}{coverage}"
+                    f"- {task}: mae_m={t.get('mae_m', 0.0):.1f}, "
+                    f"rmse_m={t.get('rmse_m', 0.0):.1f}, "
+                    f"n={t.get('n', 0)}{coverage}"
                 )
     return "\n".join(lines)
 
@@ -121,7 +131,9 @@ def summarize_unitraj_external(cache_dir: str) -> str:
         t = metrics.get(task, {})
         if t:
             lines.append(
-                f"- {task}: mae_m={t.get('mae_m', 0.0):.1f}, rmse_m={t.get('rmse_m', 0.0):.1f}, n={t.get('n', 0)}"
+                f"- {task}: mae_m={t.get('mae_m', 0.0):.1f}, "
+                f"rmse_m={t.get('rmse_m', 0.0):.1f}, "
+                f"n={t.get('n', 0)}"
             )
     return "\n".join(lines)
 
@@ -263,7 +275,8 @@ def summarize_length(cache_dir: str) -> str:
 
         if not gap and short and long:
             gap = {
-                "recon_acc_l1": _f(long.get("recon_acc_l1")) - _f(short.get("recon_acc_l1")),
+                "recon_acc_l1": _f(long.get("recon_acc_l1"))
+                - _f(short.get("recon_acc_l1")),
                 "dest_top1": _f(long.get("dest_top1")) - _f(short.get("dest_top1")),
             }
 
@@ -284,7 +297,8 @@ def summarize_length(cache_dir: str) -> str:
         return "No length-sensitivity results yet."
 
     header = (
-        "| run | recon@l1 short | recon@l1 long | gap | dest@top1 short | dest@top1 long | gap | n |\n"
+        "| run | recon@l1 short | recon@l1 long | gap"
+        " | dest@top1 short | dest@top1 long | gap | n |\n"
         "|---|---|---|---|---|---|---|---|"
     )
     lines = [f"latest: `{latest_name}`"]
@@ -294,8 +308,9 @@ def summarize_length(cache_dir: str) -> str:
     lines.append(header)
     for r in rows:
         lines.append(
-            f"| {r['run']} | {r['short_recon']:.3f} | {r['long_recon']:.3f} | {r['gap_recon']:.3f} | "
-            f"{r['short_dest']:.3f} | {r['long_dest']:.3f} | {r['gap_dest']:.3f} | {r['n']} |"
+            f"| {r['run']} | {r['short_recon']:.3f} | {r['long_recon']:.3f}"
+            f" | {r['gap_recon']:.3f} | {r['short_dest']:.3f}"
+            f" | {r['long_dest']:.3f} | {r['gap_dest']:.3f} | {r['n']} |"
         )
     return "\n".join(lines)
 
@@ -313,11 +328,22 @@ def summarize_invariance(cache_dir: str) -> str:
     down = obj.get("downsample_destination", {})
     lines = [f"latest: `{Path(path).name}`"]
     if prefix:
-        lines.append("- prefix dest_top1: " + ", ".join(f"{k}:{v.get('dest_top1', 0.0):.3f}" for k, v in prefix.items()))
+        lines.append(
+            "- prefix dest_top1: "
+            + ", ".join(f"{k}:{v.get('dest_top1', 0.0):.3f}" for k, v in prefix.items())
+        )
     if time_shift:
-        lines.append("- time-shift dest_top1: " + ", ".join(f"{k}:{v.get('dest_top1', 0.0):.3f}" for k, v in time_shift.items()))
+        lines.append(
+            "- time-shift dest_top1: "
+            + ", ".join(
+                f"{k}:{v.get('dest_top1', 0.0):.3f}" for k, v in time_shift.items()
+            )
+        )
     if down:
-        lines.append("- downsample dest_top1: " + ", ".join(f"{k}:{v.get('dest_top1', 0.0):.3f}" for k, v in down.items()))
+        lines.append(
+            "- downsample dest_top1: "
+            + ", ".join(f"{k}:{v.get('dest_top1', 0.0):.3f}" for k, v in down.items())
+        )
     return "\n".join(lines)
 
 
@@ -349,7 +375,9 @@ def summarize_travel_time(cache_dir: str) -> str:
     lines = [f"latest: `{Path(path).name}`"]
     results = obj.get("results", {})
     if results:
-        header = "| prefix_ratio | MAE (s) | RMSE (s) | MAPE | R² |\n|---|---|---|---|---|"
+        header = (
+            "| prefix_ratio | MAE (s) | RMSE (s) | MAPE | R² |\n|---|---|---|---|---|"
+        )
         lines.append(header)
         for ratio, metrics in sorted(results.items(), key=lambda x: float(x[0])):
             lines.append(
@@ -377,7 +405,9 @@ def summarize_anomaly_detection(cache_dir: str) -> str:
         for atype in ("noise", "reverse", "swap", "detour", "combined"):
             m = results.get(atype, {})
             if m:
-                lines.append(f"| {atype} | {m.get('auroc', 0):.3f} | {m.get('pr_auc', 0):.3f} |")
+                lines.append(
+                    f"| {atype} | {m.get('auroc', 0):.3f} | {m.get('pr_auc', 0):.3f} |"
+                )
     return "\n".join(lines)
 
 
@@ -417,7 +447,13 @@ def summarize_similarity_retrieval(cache_dir: str) -> str:
     for section in ("geographic_knn", "self_retrieval"):
         m = results.get(section, {})
         if m:
-            lines.append(f"- **{section}**: " + ", ".join(f"{k}={v:.3f}" if isinstance(v, float) else f"{k}={v}" for k, v in m.items()))
+            lines.append(
+                f"- **{section}**: "
+                + ", ".join(
+                    f"{k}={v:.3f}" if isinstance(v, float) else f"{k}={v}"
+                    for k, v in m.items()
+                )
+            )
     return "\n".join(lines)
 
 
@@ -444,7 +480,9 @@ def summarize_unitraj_regression(cache_dir: str) -> str:
                 t = _pick_metric(split.get(task, {}))
                 if t:
                     parts.append(
-                        f"- {task}: mae_m={t.get('mae_m', 0.0):.1f}, rmse_m={t.get('rmse_m', 0.0):.1f}, n={t.get('n', 0)}"
+                        f"- {task}: mae_m={t.get('mae_m', 0.0):.1f}, "
+                        f"rmse_m={t.get('rmse_m', 0.0):.1f}, "
+                        f"n={t.get('n', 0)}"
                     )
     if not parts:
         return "No regression-based UniTraj results yet."
@@ -467,12 +505,29 @@ def main():
     length_md = summarize_length(cache_dir)
     invariance_md = summarize_invariance(cache_dir)
     retrieval_md = summarize_simple(
-        cache_dir, "embedding_retrieval_*.json", "embedding retrieval", ["top1", "top5", "samples"]
+        cache_dir,
+        "embedding_retrieval_*.json",
+        "embedding retrieval",
+        ["top1", "top5", "samples"],
     )
-    reverse_md = summarize_simple(cache_dir, "reverse_order_*.json", "reverse-order", ["original", "reversed", "delta"])
-    change_md = summarize_simple(cache_dir, "change_detection_*.json", "change detection", ["pos_mean_dist", "neg_mean_dist", "auc"])
-    unitraj_md = summarize_unitraj_eval(cache_dir, "unitraj_eval_*.json", "UniTraj-style eval", exclude_substr="robust")
-    unitraj_robust_md = summarize_unitraj_eval(cache_dir, "unitraj_eval_robust_*.json", "robust UniTraj eval")
+    reverse_md = summarize_simple(
+        cache_dir,
+        "reverse_order_*.json",
+        "reverse-order",
+        ["original", "reversed", "delta"],
+    )
+    change_md = summarize_simple(
+        cache_dir,
+        "change_detection_*.json",
+        "change detection",
+        ["pos_mean_dist", "neg_mean_dist", "auc"],
+    )
+    unitraj_md = summarize_unitraj_eval(
+        cache_dir, "unitraj_eval_*.json", "UniTraj-style eval", exclude_substr="robust"
+    )
+    unitraj_robust_md = summarize_unitraj_eval(
+        cache_dir, "unitraj_eval_robust_*.json", "robust UniTraj eval"
+    )
     unitraj_external_md = summarize_unitraj_external(cache_dir)
     data_eff_md = summarize_data_efficiency(cache_dir)
     transfer_md = summarize_transfer(cache_dir)
@@ -532,8 +587,13 @@ def main():
     if foundation_path.exists():
         text = foundation_path.read_text()
         if "<!-- RESULTS:BEGIN -->" not in text:
-            text += "\n\n## Latest Results\n<!-- RESULTS:BEGIN -->\n(pending)\n<!-- RESULTS:END -->\n"
-        text = replace_block(text, "<!-- RESULTS:BEGIN -->", "<!-- RESULTS:END -->", summary)
+            text += (
+                "\n\n## Latest Results\n"
+                "<!-- RESULTS:BEGIN -->\n(pending)\n<!-- RESULTS:END -->\n"
+            )
+        text = replace_block(
+            text, "<!-- RESULTS:BEGIN -->", "<!-- RESULTS:END -->", summary
+        )
         foundation_path.write_text(text)
 
     # Update paper draft
@@ -541,8 +601,13 @@ def main():
     if paper_path.exists():
         text = paper_path.read_text()
         if "<!-- RESULTS:BEGIN -->" not in text:
-            text += "\n\n## Results (Living Section)\n<!-- RESULTS:BEGIN -->\n(pending)\n<!-- RESULTS:END -->\n"
-        text = replace_block(text, "<!-- RESULTS:BEGIN -->", "<!-- RESULTS:END -->", summary)
+            text += (
+                "\n\n## Results (Living Section)\n"
+                "<!-- RESULTS:BEGIN -->\n(pending)\n<!-- RESULTS:END -->\n"
+            )
+        text = replace_block(
+            text, "<!-- RESULTS:BEGIN -->", "<!-- RESULTS:END -->", summary
+        )
         paper_path.write_text(text)
 
     print("updated results blocks")

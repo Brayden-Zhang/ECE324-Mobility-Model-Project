@@ -6,7 +6,9 @@ import numpy as np
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Export WorldTrace pickle/parquet to a simple CSV")
+    parser = argparse.ArgumentParser(
+        description="Export WorldTrace pickle/parquet to a simple CSV"
+    )
     parser.add_argument("--input", type=str, required=True)
     parser.add_argument("--output", type=str, required=True)
     return parser.parse_args()

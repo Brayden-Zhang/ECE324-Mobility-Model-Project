@@ -46,7 +46,9 @@ class MacroDistributionDataset(Dataset):
             row_sum = dist.sum(axis=1, keepdims=True)
             dist = np.divide(dist, row_sum, out=np.zeros_like(dist), where=row_sum > 0)
 
-        time_ts_by_idx = np.array([_month_to_ts(str(k)) for k in self.meta.time_keys], dtype=np.float32)
+        time_ts_by_idx = np.array(
+            [_month_to_ts(str(k)) for k in self.meta.time_keys], dtype=np.float32
+        )
         time_ts = time_ts_by_idx[time_idx]
 
         self.dist = dist

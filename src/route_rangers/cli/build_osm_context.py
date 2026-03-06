@@ -40,13 +40,23 @@ def main():
         geom = row.geometry
         if geom is None:
             continue
-        if geom.geom_type in ("Point", "Polygon", "MultiPolygon", "LineString", "MultiLineString"):
+        if geom.geom_type in (
+            "Point",
+            "Polygon",
+            "MultiPolygon",
+            "LineString",
+            "MultiLineString",
+        ):
             if geom.geom_type == "Point":
                 lat, lon = geom.y, geom.x
             else:
                 centroid = geom.centroid
                 lat, lon = centroid.y, centroid.x
-            cell = h3.latlng_to_cell(lat, lon, args.res) if hasattr(h3, "latlng_to_cell") else h3.geo_to_h3(lat, lon, args.res)
+            cell = (
+                h3.latlng_to_cell(lat, lon, args.res)
+                if hasattr(h3, "latlng_to_cell")
+                else h3.geo_to_h3(lat, lon, args.res)
+            )
             key = str(cell)
             if key not in context:
                 context[key] = np.zeros((16,), dtype=np.float32)

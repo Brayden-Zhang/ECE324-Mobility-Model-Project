@@ -7,25 +7,43 @@ from route_rangers.cli import run_unitraj_eval as ue
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run data-efficiency sweeps for UniTraj-style eval")
+    parser = argparse.ArgumentParser(
+        description="Run data-efficiency sweeps for UniTraj-style eval"
+    )
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--local_data", type=str, required=True)
-    parser.add_argument("--fractions", nargs="+", type=float, required=True, help="Fractions of train data to build centroids")
+    parser.add_argument(
+        "--fractions",
+        nargs="+",
+        type=float,
+        required=True,
+        help="Fractions of train data to build centroids",
+    )
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--device", type=str, default="cuda" if ue.torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if ue.torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=0)
-    parser.add_argument("--split_mode", type=str, default="both", choices=["both", "random", "temporal"])
-    parser.add_argument("--task", type=str, default="both", choices=["both", "recovery", "prediction"])
+    parser.add_argument(
+        "--split_mode", type=str, default="both", choices=["both", "random", "temporal"]
+    )
+    parser.add_argument(
+        "--task", type=str, default="both", choices=["both", "recovery", "prediction"]
+    )
     parser.add_argument("--mask_ratio", type=float, default=0.5)
     parser.add_argument("--pred_steps", type=int, default=5)
-    parser.add_argument("--centroid_level", type=str, default="l0", choices=["l0", "l1", "l2"])
+    parser.add_argument(
+        "--centroid_level", type=str, default="l0", choices=["l0", "l1", "l2"]
+    )
     parser.add_argument("--coord_noise_std_m", type=float, default=0.0)
     parser.add_argument("--input_drop_ratio", type=float, default=0.0)
     parser.add_argument("--disable_graph", action="store_true")
-    parser.add_argument("--output", type=str, default="cache/unitraj_data_efficiency.json")
+    parser.add_argument(
+        "--output", type=str, default="cache/unitraj_data_efficiency.json"
+    )
     return parser.parse_args()
 
 

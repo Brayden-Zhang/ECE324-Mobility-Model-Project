@@ -21,7 +21,9 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--max_samples", type=int, default=50000)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--output", type=str, default="")
     return parser.parse_args()
 
@@ -67,9 +69,16 @@ def main():
     args = parse_args()
     rb.set_seed(args.seed)
 
-    pack = rb.load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len, disable_graph=False)
+    pack = rb.load_backbone(
+        args.checkpoint,
+        device=args.device,
+        override_max_len=args.max_len,
+        disable_graph=False,
+    )
     raw_records = rb.load_local_data(args.local_data)
-    dataset = rb.FixedTrajectoryDataset(raw_records, max_len=args.max_len, sample_limit=args.max_samples)
+    dataset = rb.FixedTrajectoryDataset(
+        raw_records, max_len=args.max_len, sample_limit=args.max_samples
+    )
 
     tree, geom_index, ids = load_commuting_zones(args.cz_csv)
 
@@ -85,8 +94,8 @@ def main():
         dest_points.append((dest[0], dest[1]))
 
     labels = assign_zones(tree, geom_index, ids, dest_points)
-    label_set = sorted({l for l in labels if l is not None})
-    label_map = {l: i for i, l in enumerate(label_set)}
+    label_set = sorted({label for label in labels if label is not None})
+    label_map = {label: i for i, label in enumerate(label_set)}
 
     loader = DataLoader(
         dataset,
@@ -104,7 +113,9 @@ def main():
         timestamps = batch["timestamps"].to(args.device)
         attention = batch["attention_mask"].to(args.device)
 
-        outputs, _, _, _, _ = rb.forward_backbone(batch, pack, device=args.device, max_len=args.max_len, mask=None)
+        outputs, _, _, _, _ = rb.forward_backbone(
+            batch, pack, device=args.device, max_len=args.max_len, mask=None
+        )
         pooled = masked_mean(outputs["step_hidden"], attention).detach().cpu().numpy()
 
         bsz = pooled.shape[0]

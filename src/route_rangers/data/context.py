@@ -29,14 +29,20 @@ class OSMContextIndex:
             raise RuntimeError("h3 is required to lookup OSM context by cell")
         feats = np.zeros((lat.shape[0], self.feature_dim), dtype=np.float32)
         for i in range(lat.shape[0]):
-            cell = h3.latlng_to_cell(lat[i], lon[i], res) if hasattr(h3, "latlng_to_cell") else h3.geo_to_h3(lat[i], lon[i], res)
+            cell = (
+                h3.latlng_to_cell(lat[i], lon[i], res)
+                if hasattr(h3, "latlng_to_cell")
+                else h3.geo_to_h3(lat[i], lon[i], res)
+            )
             key = str(cell)
             if key in self.index:
                 feats[i] = self.index[key]
         return feats
 
 
-def context_tensor_from_index(index: OSMContextIndex, coords: torch.Tensor, res: int) -> torch.Tensor:
+def context_tensor_from_index(
+    index: OSMContextIndex, coords: torch.Tensor, res: int
+) -> torch.Tensor:
     if index is None:
         return None
     lat = coords[..., 0].detach().cpu().numpy()

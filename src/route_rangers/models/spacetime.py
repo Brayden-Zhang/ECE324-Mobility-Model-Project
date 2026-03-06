@@ -59,7 +59,9 @@ class SpaceTimeEncoder(nn.Module):
         if self.include_raw:
             feats.append(base)
 
-        freq_bands = 2.0 ** torch.arange(self.num_freqs, device=coords.device, dtype=coords_f.dtype)
+        freq_bands = 2.0 ** torch.arange(
+            self.num_freqs, device=coords.device, dtype=coords_f.dtype
+        )
         for freq in freq_bands:
             scaled = base * freq
             feats.append(torch.sin(scaled))

@@ -15,7 +15,12 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from route_rangers.cli.run_benchmarks import FixedTrajectoryDataset, collate_fixed, load_backbone, load_local_data  # noqa: E402
+from route_rangers.cli.run_benchmarks import (  # noqa: E402
+    FixedTrajectoryDataset,
+    collate_fixed,
+    load_backbone,
+    load_local_data,
+)
 from route_rangers.cli.run_benchmarks import forward_backbone  # noqa: E402
 
 
@@ -26,7 +31,9 @@ def parse_args():
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=0)
     # Default name matches scripts/collect_results.py glob: cache/reverse_order_*.json
@@ -69,7 +76,9 @@ def reverse_batch(batch: dict) -> dict:
         "coords": coords,
         "timestamps": timestamps,
         "attention_mask": attention,
-        "start_ts": batch.get("start_ts", torch.zeros((bsz,))).clone() if "start_ts" in batch else None,
+        "start_ts": batch.get("start_ts", torch.zeros((bsz,))).clone()
+        if "start_ts" in batch
+        else None,
     }
 
 
@@ -80,9 +89,13 @@ def main():
     if not Path(args.local_data).exists():
         raise FileNotFoundError(f"local_data not found: {args.local_data}")
 
-    pack = load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
     records = load_local_data(args.local_data)
-    dataset = FixedTrajectoryDataset(records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = FixedTrajectoryDataset(
+        records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
     if len(dataset) < 10:
         raise RuntimeError(f"not enough samples for reverse-order test: {len(dataset)}")
 
@@ -94,11 +107,15 @@ def main():
         collate_fn=collate_fixed,
     )
 
-    total = {"orig": {"top1": 0.0, "top5": 0.0, "nll": 0.0, "n": 0},
-             "rev": {"top1": 0.0, "top5": 0.0, "nll": 0.0, "n": 0}}
+    total = {
+        "orig": {"top1": 0.0, "top5": 0.0, "nll": 0.0, "n": 0},
+        "rev": {"top1": 0.0, "top5": 0.0, "nll": 0.0, "n": 0},
+    }
 
     for batch in loader:
-        outputs, _, t1, _, attention = forward_backbone(batch, pack, device=args.device, max_len=args.max_len, mask=None)
+        outputs, _, t1, _, attention = forward_backbone(
+            batch, pack, device=args.device, max_len=args.max_len, mask=None
+        )
         last_idx = attention.sum(dim=1).long().clamp(min=1) - 1
         dest_targets = t1.to(args.device).gather(1, last_idx.unsqueeze(1)).squeeze(1)
         metrics = _dest_metrics(outputs["dest_logits"], dest_targets)
@@ -108,9 +125,13 @@ def main():
         total["orig"]["n"] += bs
 
         rev = reverse_batch(batch)
-        outputs_r, _, t1_r, _, attention_r = forward_backbone(rev, pack, device=args.device, max_len=args.max_len, mask=None)
+        outputs_r, _, t1_r, _, attention_r = forward_backbone(
+            rev, pack, device=args.device, max_len=args.max_len, mask=None
+        )
         last_idx_r = attention_r.sum(dim=1).long().clamp(min=1) - 1
-        dest_targets_r = t1_r.to(args.device).gather(1, last_idx_r.unsqueeze(1)).squeeze(1)
+        dest_targets_r = (
+            t1_r.to(args.device).gather(1, last_idx_r.unsqueeze(1)).squeeze(1)
+        )
         metrics_r = _dest_metrics(outputs_r["dest_logits"], dest_targets_r)
         bs_r = dest_targets_r.shape[0]
         for k in ("top1", "top5", "nll"):

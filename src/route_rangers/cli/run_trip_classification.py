@@ -11,6 +11,7 @@ Since we don't have ground-truth labels, we use unsupervised proxy tasks:
 These test whether the model's embeddings capture semantically meaningful
 trajectory properties that correlate with real-world trip attributes.
 """
+
 import argparse
 import json
 import math
@@ -25,12 +26,16 @@ from route_rangers.cli import run_benchmarks as rb
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Trip classification downstream probes")
+    parser = argparse.ArgumentParser(
+        description="Trip classification downstream probes"
+    )
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--local_data", type=str, required=True)
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=0)
     parser.add_argument("--probe_epochs", type=int, default=10)
@@ -49,12 +54,19 @@ def haversine_m(lat1, lon1, lat2, lon2):
     R = 6371000.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
+    )
     c = 2 * math.asin(min(1.0, math.sqrt(a)))
     return R * c
 
 
-def compute_trip_attributes(dataset: rb.FixedTrajectoryDataset) -> Dict[str, np.ndarray]:
+def compute_trip_attributes(
+    dataset: rb.FixedTrajectoryDataset,
+) -> Dict[str, np.ndarray]:
     """Compute speed, duration, distance for each trajectory."""
     speeds = []
     durations = []
@@ -75,7 +87,9 @@ def compute_trip_attributes(dataset: rb.FixedTrajectoryDataset) -> Dict[str, np.
         # Total distance (haversine)
         total_dist = 0.0
         for i in range(1, vlen):
-            d = haversine_m(coords[i - 1, 0], coords[i - 1, 1], coords[i, 0], coords[i, 1])
+            d = haversine_m(
+                coords[i - 1, 0], coords[i - 1, 1], coords[i, 0], coords[i, 1]
+            )
             total_dist += d
 
         # Total duration
@@ -112,12 +126,20 @@ def collect_embeddings(
     batch_size: int,
 ) -> torch.Tensor:
     loader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=rb.collate_fixed,
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=rb.collate_fixed,
     )
     embeddings = []
     for batch in loader:
         outputs, _, _, _, attention = rb.forward_backbone(
-            batch, pack, device=device, max_len=max_len, mask=None,
+            batch,
+            pack,
+            device=device,
+            max_len=max_len,
+            mask=None,
         )
         pooled = masked_mean(outputs["step_hidden"], attention).detach().cpu()
         embeddings.append(pooled)
@@ -125,15 +147,30 @@ def collect_embeddings(
 
 
 def run_classification_probe(
-    train_x: torch.Tensor, train_y: torch.Tensor,
-    val_x: torch.Tensor, val_y: torch.Tensor,
-    test_x: torch.Tensor, test_y: torch.Tensor,
-    num_classes: int, epochs: int, lr: float, device: str,
+    train_x: torch.Tensor,
+    train_y: torch.Tensor,
+    val_x: torch.Tensor,
+    val_y: torch.Tensor,
+    test_x: torch.Tensor,
+    test_y: torch.Tensor,
+    num_classes: int,
+    epochs: int,
+    lr: float,
+    device: str,
 ) -> Dict[str, float]:
     return rb.train_probe(
-        train_x, train_y, val_x, val_y, test_x, test_y,
-        num_classes=num_classes, epochs=epochs, lr=lr,
-        weight_decay=1e-4, batch_size=1024, device=device,
+        train_x,
+        train_y,
+        val_x,
+        val_y,
+        test_x,
+        test_y,
+        num_classes=num_classes,
+        epochs=epochs,
+        lr=lr,
+        weight_decay=1e-4,
+        batch_size=1024,
+        device=device,
     )
 
 
@@ -141,17 +178,25 @@ def main():
     args = parse_args()
     rb.set_seed(args.seed)
 
-    pack = rb.load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = rb.load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
     raw_records = rb.load_local_data(args.local_data)
-    dataset = rb.FixedTrajectoryDataset(raw_records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = rb.FixedTrajectoryDataset(
+        raw_records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
 
     print("[trip_class] Computing trip attributes...")
     attrs = compute_trip_attributes(dataset)
 
     print("[trip_class] Computing embeddings...")
-    all_emb = collect_embeddings(dataset, pack, args.device, args.max_len, args.batch_size)
+    all_emb = collect_embeddings(
+        dataset, pack, args.device, args.max_len, args.batch_size
+    )
 
-    train_idx, val_idx, test_idx = rb.split_indices(dataset, mode="random", seed=args.seed)
+    train_idx, val_idx, test_idx = rb.split_indices(
+        dataset, mode="random", seed=args.seed
+    )
     train_x = all_emb[train_idx]
     val_x = all_emb[val_idx]
     test_x = all_emb[test_idx]
@@ -183,7 +228,11 @@ def main():
 
         # Check class distribution
         unique, counts = np.unique(labels, return_counts=True)
-        dist = {task_cfg["names"][int(u)]: int(c) for u, c in zip(unique, counts) if int(u) < len(task_cfg["names"])}
+        dist = {
+            task_cfg["names"][int(u)]: int(c)
+            for u, c in zip(unique, counts)
+            if int(u) < len(task_cfg["names"])
+        }
         print(f"\n[trip_class] {task_name}: classes={num_classes}, distribution={dist}")
 
         if len(unique) < 2:
@@ -195,8 +244,16 @@ def main():
         test_y = torch.from_numpy(labels[test_idx]).long()
 
         probe_results = run_classification_probe(
-            train_x, train_y, val_x, val_y, test_x, test_y,
-            num_classes, args.probe_epochs, args.probe_lr, args.device,
+            train_x,
+            train_y,
+            val_x,
+            val_y,
+            test_x,
+            test_y,
+            num_classes,
+            args.probe_epochs,
+            args.probe_lr,
+            args.device,
         )
         results["tasks"][task_name] = {
             "num_classes": num_classes,
@@ -206,7 +263,10 @@ def main():
             "val": probe_results["val"],
             "test": probe_results["test"],
         }
-        print(f"  test: top1={probe_results['test']['top1']:.3f} top5={probe_results['test'].get('top5', 0):.3f}")
+        print(
+            f"  test: top1={probe_results['test']['top1']:.3f} "
+            f"top5={probe_results['test'].get('top5', 0):.3f}"
+        )
 
     print(json.dumps(results, indent=2))
     if args.output:

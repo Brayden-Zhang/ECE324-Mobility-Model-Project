@@ -4,7 +4,9 @@ from pathlib import Path
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Summarize UniTraj-style eval JSON outputs")
+    parser = argparse.ArgumentParser(
+        description="Summarize UniTraj-style eval JSON outputs"
+    )
     parser.add_argument("files", nargs="+", help="eval JSON files")
     return parser.parse_args()
 
@@ -34,7 +36,9 @@ def main():
                     mae = _get(split_payload, [task, split_set, "mae_m"])
                     rmse = _get(split_payload, [task, split_set, "rmse_m"])
                     n = _get(split_payload, [task, split_set, "n"], 0)
-                    print(f"{p.name},{split_name},{task},{split_set},{mae:.2f},{rmse:.2f},{n}")
+                    print(
+                        f"{p.name},{split_name},{task},{split_set},{mae:.2f},{rmse:.2f},{n}"
+                    )
 
 
 if __name__ == "__main__":

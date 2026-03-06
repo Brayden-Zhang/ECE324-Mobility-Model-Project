@@ -20,9 +20,13 @@ except Exception:  # optional
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Build H3 vocab from a local WorldTrace pickle/parquet")
+    parser = argparse.ArgumentParser(
+        description="Build H3 vocab from a local WorldTrace pickle/parquet"
+    )
     parser.add_argument("--local_data", type=str, default="")
-    parser.add_argument("--data_mode", type=str, default="local", choices=["local", "hf_zip"])
+    parser.add_argument(
+        "--data_mode", type=str, default="local", choices=["local", "hf_zip"]
+    )
     parser.add_argument("--hf_name", type=str, default="OpenTrace/WorldTrace")
     parser.add_argument("--worldtrace_file", type=str, default="Trajectory.zip")
     parser.add_argument("--worldtrace_local_path", type=str, default="")
@@ -122,7 +126,10 @@ def main():
     with open(out, "w") as f:
         json.dump(payload, f)
     print(
-        f"saved h3 vocab to {out} (l0={len(payload['cells_l0'])}, l1={len(payload['cells_l1'])}, l2={len(payload['cells_l2'])})"
+        f"saved h3 vocab to {out} "
+        f"(l0={len(payload['cells_l0'])}, "
+        f"l1={len(payload['cells_l1'])}, "
+        f"l2={len(payload['cells_l2'])})"
     )
 
 

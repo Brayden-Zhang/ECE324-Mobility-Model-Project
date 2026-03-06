@@ -12,7 +12,9 @@ def parse_args():
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--iters", type=int, default=10)
     parser.add_argument("--warmup", type=int, default=3)
     parser.add_argument("--disable_graph", action="store_true")
@@ -39,7 +41,12 @@ def main():
     coords = torch.zeros((args.batch_size, args.max_len, 2), device=args.device)
     coords[..., 0] = 40.0
     coords[..., 1] = -73.0
-    timestamps = torch.arange(args.max_len, device=args.device).float().unsqueeze(0).repeat(args.batch_size, 1)
+    timestamps = (
+        torch.arange(args.max_len, device=args.device)
+        .float()
+        .unsqueeze(0)
+        .repeat(args.batch_size, 1)
+    )
     attention = torch.ones((args.batch_size, args.max_len), device=args.device)
     batch = {
         "coords": coords,
@@ -49,13 +56,17 @@ def main():
     }
 
     for _ in range(args.warmup):
-        _ = rb.forward_backbone(batch, pack, device=args.device, max_len=args.max_len, mask=None)
+        _ = rb.forward_backbone(
+            batch, pack, device=args.device, max_len=args.max_len, mask=None
+        )
     if args.device.startswith("cuda"):
         torch.cuda.synchronize()
 
     start = time.time()
     for _ in range(args.iters):
-        _ = rb.forward_backbone(batch, pack, device=args.device, max_len=args.max_len, mask=None)
+        _ = rb.forward_backbone(
+            batch, pack, device=args.device, max_len=args.max_len, mask=None
+        )
     if args.device.startswith("cuda"):
         torch.cuda.synchronize()
     elapsed = time.time() - start

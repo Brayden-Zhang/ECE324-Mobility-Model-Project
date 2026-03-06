@@ -63,8 +63,12 @@ class TrajectoryFMHMT(nn.Module):
             context_dim=context_dim,
             trip_feat_dim=trip_feat_dim,
         )
-        self.region_mid_builder = RegionTokenBuilder(self.encoder.embed_l1, pad_id=vocab_l1)
-        self.region_coarse_builder = RegionTokenBuilder(self.encoder.embed_l2, pad_id=vocab_l2)
+        self.region_mid_builder = RegionTokenBuilder(
+            self.encoder.embed_l1, pad_id=vocab_l1
+        )
+        self.region_coarse_builder = RegionTokenBuilder(
+            self.encoder.embed_l2, pad_id=vocab_l2
+        )
 
         self.transformer = MaskedTransformer(
             embed_dim,
@@ -88,7 +92,9 @@ class TrajectoryFMHMT(nn.Module):
         self.norm = nn.LayerNorm(embed_dim)
         self.spacetime_encoder = None
         if self.use_spacetime:
-            self.spacetime_encoder = SpaceTimeEncoder(embed_dim, num_freqs=spacetime_freqs)
+            self.spacetime_encoder = SpaceTimeEncoder(
+                embed_dim, num_freqs=spacetime_freqs
+            )
 
         self.macro_region_embed = None
         self.macro_head = None
@@ -126,7 +132,9 @@ class TrajectoryFMHMT(nn.Module):
         tokens_l1: Optional[torch.Tensor],
     ) -> torch.Tensor:
         bsz, seq_len = step_mask.shape
-        graph = torch.zeros((bsz, seq_len, seq_len), device=step_mask.device, dtype=torch.bool)
+        graph = torch.zeros(
+            (bsz, seq_len, seq_len), device=step_mask.device, dtype=torch.bool
+        )
         valid = step_mask.bool()
 
         for b in range(bsz):
@@ -204,7 +212,11 @@ class TrajectoryFMHMT(nn.Module):
                         attn_mask[b, t, mid_pos] = True
                         attn_mask[b, mid_pos, t] = True
                     coarse_idx = step_to_coarse[b, t].item()
-                    if coarse_idx >= 0 and coarse_idx < coarse_count and coarse_mask[b, coarse_idx]:
+                    if (
+                        coarse_idx >= 0
+                        and coarse_idx < coarse_count
+                        and coarse_mask[b, coarse_idx]
+                    ):
                         coarse_pos = seq_len + mid_count + coarse_idx
                         attn_mask[b, t, coarse_pos] = True
                         attn_mask[b, coarse_pos, t] = True
@@ -222,7 +234,9 @@ class TrajectoryFMHMT(nn.Module):
                 attn_mask[b, pos, pos] = True
         return attn_mask
 
-    def meso_flow_logits(self, mid_hidden: torch.Tensor, mid_mask: torch.Tensor) -> torch.Tensor:
+    def meso_flow_logits(
+        self, mid_hidden: torch.Tensor, mid_mask: torch.Tensor
+    ) -> torch.Tensor:
         if mid_hidden.numel() == 0:
             return mid_hidden.new_zeros((mid_hidden.shape[0], 0, 0))
         proj = self.flow_proj(mid_hidden)
@@ -232,7 +246,9 @@ class TrajectoryFMHMT(nn.Module):
             logits = logits.masked_fill(~pair_mask, 0.0)
         return logits
 
-    def macro_logits(self, region_idx: torch.Tensor, time_embed: torch.Tensor) -> torch.Tensor:
+    def macro_logits(
+        self, region_idx: torch.Tensor, time_embed: torch.Tensor
+    ) -> torch.Tensor:
         if self.macro_head is None or self.macro_region_embed is None:
             raise RuntimeError("macro_head is not configured")
         region_emb = self.macro_region_embed(region_idx)
@@ -261,8 +277,14 @@ class TrajectoryFMHMT(nn.Module):
             context,
             trip_features=trip_features,
         )
-        if self.spacetime_encoder is not None and coords is not None and timestamps is not None:
-            step_embed = step_embed + self.spacetime_encoder(coords, timestamps, attention_mask)
+        if (
+            self.spacetime_encoder is not None
+            and coords is not None
+            and timestamps is not None
+        ):
+            step_embed = step_embed + self.spacetime_encoder(
+                coords, timestamps, attention_mask
+            )
         if self.graph_encoder is not None:
             graph_mask = self.build_step_graph(coords, attention_mask, tokens_l1)
             step_embed = self.graph_encoder(step_embed, graph_mask=graph_mask)
@@ -272,21 +294,27 @@ class TrajectoryFMHMT(nn.Module):
         if region_source_l2 is None:
             region_source_l2 = tokens_l2
 
-        mid_tokens, mid_ids, mid_mask, step_to_mid, mid_mlm_mask = self.region_mid_builder(
-            region_source_l1,
-            step_embed,
-            attention_mask,
-            mask_ratio=region_mask_ratio,
+        mid_tokens, mid_ids, mid_mask, step_to_mid, mid_mlm_mask = (
+            self.region_mid_builder(
+                region_source_l1,
+                step_embed,
+                attention_mask,
+                mask_ratio=region_mask_ratio,
+            )
         )
-        coarse_tokens, coarse_ids, coarse_mask, step_to_coarse, coarse_mlm_mask = self.region_coarse_builder(
-            region_source_l2,
-            step_embed,
-            attention_mask,
-            mask_ratio=region_mask_ratio,
+        coarse_tokens, coarse_ids, coarse_mask, step_to_coarse, coarse_mlm_mask = (
+            self.region_coarse_builder(
+                region_source_l2,
+                step_embed,
+                attention_mask,
+                mask_ratio=region_mask_ratio,
+            )
         )
 
         full_tokens = torch.cat([step_embed, mid_tokens, coarse_tokens], dim=1)
-        attn_mask = self.build_attention_mask(attention_mask, step_to_mid, mid_mask, step_to_coarse, coarse_mask)
+        attn_mask = self.build_attention_mask(
+            attention_mask, step_to_mid, mid_mask, step_to_coarse, coarse_mask
+        )
         hidden = self.transformer(full_tokens, attn_mask=attn_mask)
         hidden = self.norm(hidden)
 
@@ -307,10 +335,18 @@ class TrajectoryFMHMT(nn.Module):
         }
 
         pooled_step = masked_mean(step_hidden, attention_mask)
-        pooled_mid = masked_mean(mid_hidden, mid_mask) if mid_count > 0 else torch.zeros_like(pooled_step)
+        pooled_mid = (
+            masked_mean(mid_hidden, mid_mask)
+            if mid_count > 0
+            else torch.zeros_like(pooled_step)
+        )
         dest_context = torch.cat([pooled_step, pooled_mid], dim=-1)
         dest_logits = self.dest_head(dest_context)
-        dest_log_var = self.dest_uncertainty_head(dest_context).squeeze(-1).clamp(min=-6.0, max=6.0)
+        dest_log_var = (
+            self.dest_uncertainty_head(dest_context)
+            .squeeze(-1)
+            .clamp(min=-6.0, max=6.0)
+        )
 
         return {
             "step_hidden": step_hidden,

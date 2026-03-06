@@ -10,6 +10,7 @@ using the model's learned embedding space. Evaluate using:
 
 This is a key foundation-model eval: good embeddings cluster similar trajectories.
 """
+
 import argparse
 import json
 import math
@@ -29,7 +30,9 @@ def parse_args():
     parser.add_argument("--local_data", type=str, required=True)
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=1000)
     parser.add_argument("--top_k", type=int, default=10)
@@ -46,7 +49,12 @@ def haversine_m(lat1, lon1, lat2, lon2):
     R = 6371000.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
+    )
     c = 2 * math.asin(min(1.0, math.sqrt(a)))
     return R * c
 
@@ -88,12 +96,20 @@ def collect_embeddings(
     batch_size: int,
 ) -> torch.Tensor:
     loader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=rb.collate_fixed,
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=rb.collate_fixed,
     )
     embeddings = []
     for batch in loader:
         outputs, _, _, _, attention = rb.forward_backbone(
-            batch, pack, device=device, max_len=max_len, mask=None,
+            batch,
+            pack,
+            device=device,
+            max_len=max_len,
+            mask=None,
         )
         pooled = masked_mean(outputs["step_hidden"], attention).detach().cpu()
         embeddings.append(pooled)
@@ -109,9 +125,14 @@ def collect_noisy_embeddings(
     noise_std: float = 0.001,
     seed: int = 42,
 ) -> torch.Tensor:
-    """Collect embeddings from lightly noised versions of trajectories for self-retrieval."""
+    """Collect embeddings from lightly noised versions of trajectories
+    for self-retrieval."""
     loader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=rb.collate_fixed,
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=rb.collate_fixed,
     )
     torch.manual_seed(seed + 99)
     embeddings = []
@@ -126,14 +147,20 @@ def collect_noisy_embeddings(
             "start_ts": batch["start_ts"],
         }
         outputs, _, _, _, attention = rb.forward_backbone(
-            noisy_batch, pack, device=device, max_len=max_len, mask=None,
+            noisy_batch,
+            pack,
+            device=device,
+            max_len=max_len,
+            mask=None,
         )
         pooled = masked_mean(outputs["step_hidden"], attention).detach().cpu()
         embeddings.append(pooled)
     return torch.cat(embeddings, dim=0)
 
 
-def knn_retrieval(query_emb: torch.Tensor, db_emb: torch.Tensor, k: int) -> torch.Tensor:
+def knn_retrieval(
+    query_emb: torch.Tensor, db_emb: torch.Tensor, k: int
+) -> torch.Tensor:
     """Return top-k indices from db for each query (cosine similarity)."""
     q_norm = torch.nn.functional.normalize(query_emb, dim=-1)
     d_norm = torch.nn.functional.normalize(db_emb, dim=-1)
@@ -164,14 +191,20 @@ def evaluate_geographic_consistency(
             r_orig = summaries["origins"][idx]
             r_dest = summaries["destinations"][idx]
             r_mean = summaries["means"][idx]
-            origin_dists.append(haversine_m(q_origin[0], q_origin[1], r_orig[0], r_orig[1]))
+            origin_dists.append(
+                haversine_m(q_origin[0], q_origin[1], r_orig[0], r_orig[1])
+            )
             dest_dists.append(haversine_m(q_dest[0], q_dest[1], r_dest[0], r_dest[1]))
             mean_dists.append(haversine_m(q_mean[0], q_mean[1], r_mean[0], r_mean[1]))
 
     return {
-        "origin_mean_dist_km": float(np.mean(origin_dists) / 1000) if origin_dists else 0.0,
+        "origin_mean_dist_km": float(np.mean(origin_dists) / 1000)
+        if origin_dists
+        else 0.0,
         "dest_mean_dist_km": float(np.mean(dest_dists) / 1000) if dest_dists else 0.0,
-        "spatial_mean_dist_km": float(np.mean(mean_dists) / 1000) if mean_dists else 0.0,
+        "spatial_mean_dist_km": float(np.mean(mean_dists) / 1000)
+        if mean_dists
+        else 0.0,
     }
 
 
@@ -202,20 +235,31 @@ def main():
     args = parse_args()
     rb.set_seed(args.seed)
 
-    pack = rb.load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = rb.load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
     raw_records = rb.load_local_data(args.local_data)
-    dataset = rb.FixedTrajectoryDataset(raw_records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = rb.FixedTrajectoryDataset(
+        raw_records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
 
     print("[retrieval] Computing trip summaries...")
     summaries = get_traj_summaries(dataset)
 
     print("[retrieval] Computing clean embeddings...")
-    clean_emb = collect_embeddings(dataset, pack, args.device, args.max_len, args.batch_size)
+    clean_emb = collect_embeddings(
+        dataset, pack, args.device, args.max_len, args.batch_size
+    )
 
     print("[retrieval] Computing noisy embeddings for self-retrieval...")
     noisy_emb = collect_noisy_embeddings(
-        dataset, pack, args.device, args.max_len, args.batch_size,
-        noise_std=0.001, seed=args.seed,
+        dataset,
+        pack,
+        args.device,
+        args.max_len,
+        args.batch_size,
+        noise_std=0.001,
+        seed=args.seed,
     )
 
     print("[retrieval] Running kNN retrieval...")
