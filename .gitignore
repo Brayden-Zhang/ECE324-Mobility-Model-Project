@@ -18,6 +18,15 @@ slurm-*.out
 /checkpoints/
 *.pt
 
+# Allow committing selected "best" checkpoints (override above)
+!/checkpoints/
+!checkpoints/hmt_nohash_full_step_25000.pt
+!checkpoints/hmt_nohash_full_step_20000.pt
+!checkpoints/hmt_nohash_full_step_15000.pt
+!checkpoints/hmt_step_15000.pt
+!checkpoints/hmt_step_10000.pt
+!checkpoints/hmt_final_step_1.pt
+
 # Data files
 /data/
 
