@@ -8,6 +8,7 @@ of the full trajectory. Reports MAE, RMSE, and MAPE in seconds.
 This is a key NeurIPS downstream eval: the model's step embeddings are probed
 to predict a scalar (duration) using a lightweight linear head.
 """
+
 import argparse
 import json
 import math
@@ -22,15 +23,21 @@ from route_rangers.cli import run_benchmarks as rb
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Travel-time estimation downstream probe")
+    parser = argparse.ArgumentParser(
+        description="Travel-time estimation downstream probe"
+    )
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--local_data", type=str, required=True)
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=0)
-    parser.add_argument("--prefix_ratios", type=float, nargs="+", default=[0.25, 0.50, 0.75, 1.0])
+    parser.add_argument(
+        "--prefix_ratios", type=float, nargs="+", default=[0.25, 0.50, 0.75, 1.0]
+    )
     parser.add_argument("--probe_epochs", type=int, default=10)
     parser.add_argument("--probe_lr", type=float, default=2e-3)
     parser.add_argument("--output", type=str, default="")
@@ -84,7 +91,11 @@ def collect_prefix_embeddings(
             "start_ts": batch["start_ts"],
         }
         outputs, _, _, _, _ = rb.forward_backbone(
-            batch_in, pack, device=device, max_len=max_len, mask=None,
+            batch_in,
+            pack,
+            device=device,
+            max_len=max_len,
+            mask=None,
         )
         pooled = masked_mean(outputs["step_hidden"], prefix_attention).detach().cpu()
         embeddings.append(pooled)
@@ -143,7 +154,9 @@ def train_tte_probe(
     return head
 
 
-def evaluate_tte(head, x: torch.Tensor, y: torch.Tensor, device: str) -> Dict[str, float]:
+def evaluate_tte(
+    head, x: torch.Tensor, y: torch.Tensor, device: str
+) -> Dict[str, float]:
     x = x.to(device)
     y = y.float()
     with torch.no_grad():
@@ -152,7 +165,7 @@ def evaluate_tte(head, x: torch.Tensor, y: torch.Tensor, device: str) -> Dict[st
     error = pred - y
     abs_error = error.abs()
     mae = float(abs_error.mean().item())
-    rmse = float(torch.sqrt((error ** 2).mean()).item())
+    rmse = float(torch.sqrt((error**2).mean()).item())
     # MAPE: avoid division by zero
     nonzero = y.abs() > 1.0
     if nonzero.sum() > 0:
@@ -165,22 +178,37 @@ def evaluate_tte(head, x: torch.Tensor, y: torch.Tensor, device: str) -> Dict[st
 def main():
     args = parse_args()
     rb.set_seed(args.seed)
-    pack = rb.load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = rb.load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
     raw_records = rb.load_local_data(args.local_data)
-    dataset = rb.FixedTrajectoryDataset(raw_records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = rb.FixedTrajectoryDataset(
+        raw_records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
 
     travel_times = compute_travel_times(dataset)
-    train_idx, val_idx, test_idx = rb.split_indices(dataset, mode="random", seed=args.seed)
+    train_idx, val_idx, test_idx = rb.split_indices(
+        dataset, mode="random", seed=args.seed
+    )
 
-    results = {"checkpoint": args.checkpoint, "dataset": args.local_data, "prefix_ratios": {}}
+    results = {
+        "checkpoint": args.checkpoint,
+        "dataset": args.local_data,
+        "prefix_ratios": {},
+    }
 
     for ratio in args.prefix_ratios:
         print(f"[TTE] prefix_ratio={ratio}")
         full_loader = DataLoader(
-            dataset, batch_size=args.batch_size, shuffle=False,
-            num_workers=0, collate_fn=rb.collate_fixed,
+            dataset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=0,
+            collate_fn=rb.collate_fixed,
         )
-        all_emb = collect_prefix_embeddings(full_loader, pack, args.device, args.max_len, ratio)
+        all_emb = collect_prefix_embeddings(
+            full_loader, pack, args.device, args.max_len, ratio
+        )
 
         train_x = all_emb[train_idx]
         val_x = all_emb[val_idx]
@@ -189,7 +217,15 @@ def main():
         val_y = travel_times[val_idx]
         test_y = travel_times[test_idx]
 
-        head = train_tte_probe(train_x, train_y, val_x, val_y, args.probe_epochs, args.probe_lr, args.device)
+        head = train_tte_probe(
+            train_x,
+            train_y,
+            val_x,
+            val_y,
+            args.probe_epochs,
+            args.probe_lr,
+            args.device,
+        )
 
         test_metrics = evaluate_tte(head, test_x, test_y, args.device)
         val_metrics = evaluate_tte(head, val_x, val_y, args.device)

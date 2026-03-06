@@ -12,7 +12,9 @@ from utils.unitraj import UniTraj
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train UniTraj on a local WorldTrace-format dataset")
+    parser = argparse.ArgumentParser(
+        description="Train UniTraj on a local WorldTrace-format dataset"
+    )
     parser.add_argument("--data_path", type=str, required=True)
     parser.add_argument("--output_dir", type=str, default="external/unitraj/outputs")
     parser.add_argument("--max_len", type=int, default=200)
@@ -24,7 +26,9 @@ def parse_args():
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--val_ratio", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     return parser.parse_args()
 
 
@@ -91,7 +95,9 @@ def main():
         mask_ratio=args.mask_ratio,
     ).to(device)
 
-    optim = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optim = torch.optim.Adam(
+        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+    )
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -132,7 +138,10 @@ def main():
                     val_losses.append(loss.item())
             val_loss = float(np.mean(val_losses)) if val_losses else None
 
-        print(f"epoch={epoch} train_loss={avg_train:.6f} val_loss={val_loss if val_loss is not None else 'n/a'}")
+        print(
+            f"epoch={epoch} train_loss={avg_train:.6f} "
+            f"val_loss={val_loss if val_loss is not None else 'n/a'}"
+        )
 
         if val_loss is not None and val_loss < best_val:
             best_val = val_loss

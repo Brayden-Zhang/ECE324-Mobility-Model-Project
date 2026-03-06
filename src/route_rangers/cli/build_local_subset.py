@@ -7,7 +7,9 @@ import pandas as pd
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Filter a trajectory dataset to a bounding box.")
+    parser = argparse.ArgumentParser(
+        description="Filter a trajectory dataset to a bounding box."
+    )
     parser.add_argument("--input", type=str, required=True)
     parser.add_argument("--output", type=str, required=True)
     parser.add_argument("--north", type=float, required=True)
@@ -30,7 +32,9 @@ def normalize_lon_lat(points: np.ndarray) -> np.ndarray:
     return arr
 
 
-def in_bbox(arr: np.ndarray, north: float, south: float, east: float, west: float) -> bool:
+def in_bbox(
+    arr: np.ndarray, north: float, south: float, east: float, west: float
+) -> bool:
     if arr.size == 0:
         return False
     lat = arr[:, 0]

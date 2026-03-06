@@ -15,7 +15,9 @@ def parse_args():
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--macro_data", type=str, required=True)
     parser.add_argument("--batch_size", type=int, default=512)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--max_batches", type=int, default=0)
     parser.add_argument("--output", type=str, default="")
     return parser.parse_args()
@@ -23,12 +25,16 @@ def parse_args():
 
 def main():
     args = parse_args()
-    pack = rb.load_backbone(args.checkpoint, device=args.device, override_max_len=200, disable_graph=False)
+    pack = rb.load_backbone(
+        args.checkpoint, device=args.device, override_max_len=200, disable_graph=False
+    )
     if pack.model.macro_head is None:
         raise RuntimeError("macro_head is not configured in checkpoint")
 
     dataset = MacroDistributionDataset(args.macro_data, normalize=True)
-    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
+    loader = DataLoader(
+        dataset, batch_size=args.batch_size, shuffle=False, num_workers=0
+    )
 
     total_kl = 0.0
     total_js = 0.0

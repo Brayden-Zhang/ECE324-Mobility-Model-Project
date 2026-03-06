@@ -4,8 +4,12 @@ from pathlib import Path
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Summarize TrajectoryFM experiment JSON files")
-    parser.add_argument("results", nargs="+", help="JSON paths (e.g., cache/results_*.json)")
+    parser = argparse.ArgumentParser(
+        description="Summarize TrajectoryFM experiment JSON files"
+    )
+    parser.add_argument(
+        "results", nargs="+", help="JSON paths (e.g., cache/results_*.json)"
+    )
     return parser.parse_args()
 
 

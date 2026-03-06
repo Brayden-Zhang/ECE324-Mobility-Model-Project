@@ -62,7 +62,15 @@ def _h3_to_int(cell) -> int:
 
 
 class H3Tokenizer:
-    def __init__(self, res0: int, res1: int, res2: int, vocab_sizes, hash_tokens: bool = True, h3_vocab: str = ""):
+    def __init__(
+        self,
+        res0: int,
+        res1: int,
+        res2: int,
+        vocab_sizes,
+        hash_tokens: bool = True,
+        h3_vocab: str = "",
+    ):
         self.resolutions = (res0, res1, res2)
         self.vocab_sizes = vocab_sizes
         self.hash_tokens = hash_tokens
@@ -85,9 +93,14 @@ class H3Tokenizer:
                 {str(cell): i for i, cell in enumerate(cells_l1)},
                 {str(cell): i for i, cell in enumerate(cells_l2)},
             )
-            if len(cells_l0) > vocab_sizes[0] or len(cells_l1) > vocab_sizes[1] or len(cells_l2) > vocab_sizes[2]:
+            if (
+                len(cells_l0) > vocab_sizes[0]
+                or len(cells_l1) > vocab_sizes[1]
+                or len(cells_l2) > vocab_sizes[2]
+            ):
                 raise ValueError(
-                    "h3_vocab size exceeds configured vocab sizes; rebuild vocab or increase vocab_l*"
+                    "h3_vocab size exceeds configured vocab sizes; "
+                    "rebuild vocab or increase vocab_l*"
                 )
 
     def tokenize(self, coords: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -122,9 +135,13 @@ class VQCodebook(nn.Module):
         self.embed_dim = embed_dim
         self.commit_weight = commit_weight
         self.codebook = nn.Embedding(codebook_size, embed_dim)
-        nn.init.uniform_(self.codebook.weight, -1.0 / codebook_size, 1.0 / codebook_size)
+        nn.init.uniform_(
+            self.codebook.weight, -1.0 / codebook_size, 1.0 / codebook_size
+        )
 
-    def forward(self, z: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+        self, z: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # z: [B, L, D]
         flat = z.reshape(-1, self.embed_dim)
         dist = (
@@ -148,7 +165,9 @@ class TimeFeatures(nn.Module):
         # cyclical time + elapsed position + irregular sampling statistics
         self.proj = nn.Linear(11, embed_dim)
 
-    def forward(self, timestamps: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self, timestamps: torch.Tensor, attention_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         # timestamps: [B, L] in seconds
         ts = timestamps.float()
         if attention_mask is None:
@@ -165,7 +184,10 @@ class TimeFeatures(nn.Module):
         dt[:, 1:] = (ts[:, 1:] - ts[:, :-1]).clamp(min=0.0)
         dt = dt * mask
         valid_dt = (dt > 0).float()
-        mean_dt = (dt.sum(dim=1, keepdim=True) / valid_dt.sum(dim=1, keepdim=True).clamp(min=1.0)).clamp(min=1e-3)
+        mean_dt = (
+            dt.sum(dim=1, keepdim=True)
+            / valid_dt.sum(dim=1, keepdim=True).clamp(min=1.0)
+        ).clamp(min=1e-3)
         dt_norm = dt / mean_dt
         log_dt = torch.log1p(dt)
         inv_dt = 1.0 / (1.0 + dt_norm)
@@ -234,9 +256,15 @@ class HMTTokenizer(nn.Module):
             self.encoder_l0 = FeatureEncoder(feature_dim, embed_dim, config.vq_dim)
             self.encoder_l1 = FeatureEncoder(feature_dim, embed_dim, config.vq_dim)
             self.encoder_l2 = FeatureEncoder(feature_dim, embed_dim, config.vq_dim)
-            self.vq_l0 = VQCodebook(config.vq_codebook_l0, config.vq_dim, config.commit_weight)
-            self.vq_l1 = VQCodebook(config.vq_codebook_l1, config.vq_dim, config.commit_weight)
-            self.vq_l2 = VQCodebook(config.vq_codebook_l2, config.vq_dim, config.commit_weight)
+            self.vq_l0 = VQCodebook(
+                config.vq_codebook_l0, config.vq_dim, config.commit_weight
+            )
+            self.vq_l1 = VQCodebook(
+                config.vq_codebook_l1, config.vq_dim, config.commit_weight
+            )
+            self.vq_l2 = VQCodebook(
+                config.vq_codebook_l2, config.vq_dim, config.commit_weight
+            )
 
     def forward(
         self,
@@ -257,7 +285,12 @@ class HMTTokenizer(nn.Module):
             tokens_l0 = torch.from_numpy(np.stack(l0_list, axis=0)).to(coords.device)
             tokens_l1 = torch.from_numpy(np.stack(l1_list, axis=0)).to(coords.device)
             tokens_l2 = torch.from_numpy(np.stack(l2_list, axis=0)).to(coords.device)
-            return tokens_l0, tokens_l1, tokens_l2, torch.tensor(0.0, device=coords.device)
+            return (
+                tokens_l0,
+                tokens_l1,
+                tokens_l2,
+                torch.tensor(0.0, device=coords.device),
+            )
 
         feats = build_point_features(coords, timestamps, attention_mask=attention_mask)
         if context is not None:
@@ -294,8 +327,12 @@ def build_point_features(
 
     lat = coords[..., 0:1]
     lon = coords[..., 1:2]
-    mean_lat = (lat * valid).sum(dim=1, keepdim=True) / valid.sum(dim=1, keepdim=True).clamp(min=1.0)
-    mean_lon = (lon * valid).sum(dim=1, keepdim=True) / valid.sum(dim=1, keepdim=True).clamp(min=1.0)
+    mean_lat = (lat * valid).sum(dim=1, keepdim=True) / valid.sum(
+        dim=1, keepdim=True
+    ).clamp(min=1.0)
+    mean_lon = (lon * valid).sum(dim=1, keepdim=True) / valid.sum(
+        dim=1, keepdim=True
+    ).clamp(min=1.0)
     lat_rel = (lat - mean_lat) * valid
     lon_rel = (lon - mean_lon) * valid
 
@@ -317,7 +354,10 @@ def build_point_features(
         dt[:, 1:] = (ts[:, 1:] - ts[:, :-1]).clamp(min=0.0)
         dt = dt * mask
         valid_dt = (dt > 0).float()
-        mean_dt = (dt.sum(dim=1, keepdim=True) / valid_dt.sum(dim=1, keepdim=True).clamp(min=1.0)).clamp(min=1e-3)
+        mean_dt = (
+            dt.sum(dim=1, keepdim=True)
+            / valid_dt.sum(dim=1, keepdim=True).clamp(min=1.0)
+        ).clamp(min=1e-3)
         dt_norm = dt / mean_dt
         log_dt = torch.log1p(dt)
 
@@ -365,8 +405,8 @@ def pool_features(feats: torch.Tensor, stride: int) -> torch.Tensor:
     # feats: [B, L, D]
     if stride <= 1:
         return feats
-    b, l, d = feats.shape
-    pad = (stride - (l % stride)) % stride
+    b, seq_len, d = feats.shape
+    pad = (stride - (seq_len % stride)) % stride
     if pad:
         feats = torch.cat([feats, feats[:, -1:].repeat(1, pad, 1)], dim=1)
     feats = feats.view(b, -1, stride, d).mean(dim=2)
@@ -375,9 +415,9 @@ def pool_features(feats: torch.Tensor, stride: int) -> torch.Tensor:
 
 def upsample_tokens(tokens: torch.Tensor, target_len: int) -> torch.Tensor:
     # tokens: [B, L'] -> [B, target_len]
-    b, l = tokens.shape
-    if l == target_len:
+    b, seq_len = tokens.shape
+    if seq_len == target_len:
         return tokens
-    repeat = math.ceil(target_len / l)
+    repeat = math.ceil(target_len / seq_len)
     expanded = tokens.repeat_interleave(repeat, dim=1)
     return expanded[:, :target_len]

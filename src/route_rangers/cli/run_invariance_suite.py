@@ -15,18 +15,27 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from route_rangers.cli.run_benchmarks import FixedTrajectoryDataset, collate_fixed, load_backbone, load_local_data  # noqa: E402
+from route_rangers.cli.run_benchmarks import (  # noqa: E402
+    FixedTrajectoryDataset,
+    collate_fixed,
+    load_backbone,
+    load_local_data,
+)
 from route_rangers.cli.run_benchmarks import forward_backbone  # noqa: E402
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run invariance/robustness suite for trajectory models.")
+    parser = argparse.ArgumentParser(
+        description="Run invariance/robustness suite for trajectory models."
+    )
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--local_data", type=str, required=True)
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=0)
     parser.add_argument("--prefix_ratios", type=str, default="0.25,0.5,0.75,1.0")
@@ -80,7 +89,9 @@ def evaluate_prefixes(loader, pack, device, max_len, ratios: List[float]):
             prefix_batch = dict(batch)
             prefix_batch["attention_mask"] = prefix_attention
 
-            outputs, _, t1, _, _ = forward_backbone(prefix_batch, pack, device=device, max_len=max_len, mask=None)
+            outputs, _, t1, _, _ = forward_backbone(
+                prefix_batch, pack, device=device, max_len=max_len, mask=None
+            )
             last_idx = full_attention.sum(dim=1).long().clamp(min=1) - 1
             dest_targets = t1.to(device).gather(1, last_idx.unsqueeze(1)).squeeze(1)
             metrics = _dest_metrics(outputs["dest_logits"], dest_targets)
@@ -109,7 +120,9 @@ def evaluate_time_shifts(loader, pack, device, max_len, shifts: List[int]):
             shifted = timestamps + attention * float(shift)
             shift_batch = dict(batch)
             shift_batch["timestamps"] = shifted
-            outputs, _, t1, _, _ = forward_backbone(shift_batch, pack, device=device, max_len=max_len, mask=None)
+            outputs, _, t1, _, _ = forward_backbone(
+                shift_batch, pack, device=device, max_len=max_len, mask=None
+            )
             last_idx = attention.sum(dim=1).long().clamp(min=1) - 1
             dest_targets = t1.to(device).gather(1, last_idx.unsqueeze(1)).squeeze(1)
             metrics = _dest_metrics(outputs["dest_logits"], dest_targets)
@@ -142,7 +155,9 @@ def evaluate_downsample(loader, pack, device, max_len, rates: List[float]):
             down_attention = attention * down_mask
             down_batch = dict(batch)
             down_batch["attention_mask"] = down_attention
-            outputs, _, t1, _, _ = forward_backbone(down_batch, pack, device=device, max_len=max_len, mask=None)
+            outputs, _, t1, _, _ = forward_backbone(
+                down_batch, pack, device=device, max_len=max_len, mask=None
+            )
             last_idx = attention.sum(dim=1).long().clamp(min=1) - 1
             dest_targets = t1.to(device).gather(1, last_idx.unsqueeze(1)).squeeze(1)
             metrics = _dest_metrics(outputs["dest_logits"], dest_targets)
@@ -169,9 +184,13 @@ def main():
     if not Path(args.local_data).exists():
         raise FileNotFoundError(f"local_data not found: {args.local_data}")
 
-    pack = load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
     records = load_local_data(args.local_data)
-    dataset = FixedTrajectoryDataset(records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = FixedTrajectoryDataset(
+        records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
     if len(dataset) < 10:
         raise RuntimeError(f"not enough samples for invariance suite: {len(dataset)}")
 
@@ -191,9 +210,15 @@ def main():
         "checkpoint": args.checkpoint,
         "dataset": args.local_data,
         "samples": len(dataset),
-        "prefix_destination": evaluate_prefixes(loader, pack, args.device, args.max_len, prefix_ratios),
-        "time_shift_destination": evaluate_time_shifts(loader, pack, args.device, args.max_len, time_shifts),
-        "downsample_destination": evaluate_downsample(loader, pack, args.device, args.max_len, down_rates),
+        "prefix_destination": evaluate_prefixes(
+            loader, pack, args.device, args.max_len, prefix_ratios
+        ),
+        "time_shift_destination": evaluate_time_shifts(
+            loader, pack, args.device, args.max_len, time_shifts
+        ),
+        "downsample_destination": evaluate_downsample(
+            loader, pack, args.device, args.max_len, down_rates
+        ),
     }
 
     out = Path(args.output)

@@ -27,8 +27,7 @@ class EvalResult:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="UniTraj-style recovery/prediction eval for "
-        "TrajectoryFM-HMT"
+        description="UniTraj-style recovery/prediction eval for TrajectoryFM-HMT"
     )
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--local_data", type=str, default="")
@@ -36,38 +35,24 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--device",
-        type=str,
-        default="cuda" if torch.cuda.is_available() else "cpu")
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=0)
     parser.add_argument(
         "--split_mode",
         type=str,
         default="both",
-        choices=[
-            "both",
-            "random",
-            "temporal",
-            "all"])
+        choices=["both", "random", "temporal", "all"],
+    )
     parser.add_argument(
-        "--task",
-        type=str,
-        default="both",
-        choices=[
-            "both",
-            "recovery",
-            "prediction"])
+        "--task", type=str, default="both", choices=["both", "recovery", "prediction"]
+    )
     parser.add_argument("--mask_ratio", type=float, default=0.5)
     parser.add_argument("--pred_steps", type=int, default=5)
     parser.add_argument(
-        "--centroid_level",
-        type=str,
-        default="l0",
-        choices=[
-            "l0",
-            "l1",
-            "l2"])
+        "--centroid_level", type=str, default="l0", choices=["l0", "l1", "l2"]
+    )
     parser.add_argument("--centroid_samples", type=int, default=0)
     parser.add_argument("--centroid_fraction", type=float, default=0.0)
     parser.add_argument("--coord_noise_std_m", type=float, default=0.0)
@@ -76,10 +61,7 @@ def parse_args():
         "--coord_mode",
         type=str,
         default="auto",
-        choices=[
-            "auto",
-            "degrees",
-            "meters"],
+        choices=["auto", "degrees", "meters"],
         help=(
             "Distance mode for coords. Auto selects meters if |coord| > 360, "
             "else degrees."
@@ -125,10 +107,7 @@ def parse_args():
             "metrics (slower; diagnostics only)."
         ),
     )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="cache/unitraj_eval.json")
+    parser.add_argument("--output", type=str, default="cache/unitraj_eval.json")
     return parser.parse_args()
 
 
@@ -141,8 +120,7 @@ def _extract_trajectory(record: dict):
     return traj
 
 
-def infer_coord_order_stats(
-        raw_records, sample_limit: int = 0) -> Dict[str, object]:
+def infer_coord_order_stats(raw_records, sample_limit: int = 0) -> Dict[str, object]:
     """Audit inferred raw coordinate ordering before normalization."""
     considered = 0
     invalid = 0
@@ -221,8 +199,10 @@ def _haversine_m(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     lon2 = target[:, 1] * deg2rad
     dlat = lat2 - lat1
     dlon = lon2 - lon1
-    a = torch.sin(dlat / 2) ** 2 + torch.cos(lat1) * \
-        torch.cos(lat2) * torch.sin(dlon / 2) ** 2
+    a = (
+        torch.sin(dlat / 2) ** 2
+        + torch.cos(lat1) * torch.cos(lat2) * torch.sin(dlon / 2) ** 2
+    )
     c = 2 * torch.asin(torch.clamp(a.sqrt(), max=1.0))
     return 6371000.0 * c
 
@@ -231,23 +211,23 @@ def _euclidean_m(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     if pred.numel() == 0:
         return pred.new_zeros((0,))
     diff = pred - target
-    return torch.sqrt((diff ** 2).sum(dim=-1))
+    return torch.sqrt((diff**2).sum(dim=-1))
 
 
 def _distance_m(
-        pred: torch.Tensor,
-        target: torch.Tensor,
-        coord_mode: str) -> torch.Tensor:
+    pred: torch.Tensor, target: torch.Tensor, coord_mode: str
+) -> torch.Tensor:
     if coord_mode == "meters":
         return _euclidean_m(pred, target)
     return _haversine_m(pred, target)
 
 
 def _apply_coord_noise(
-        coords: torch.Tensor,
-        attention: torch.Tensor,
-        std_m: float,
-        generator: torch.Generator) -> torch.Tensor:
+    coords: torch.Tensor,
+    attention: torch.Tensor,
+    std_m: float,
+    generator: torch.Generator,
+) -> torch.Tensor:
     if std_m <= 0:
         return coords
     lat = coords[..., 0]
@@ -258,10 +238,9 @@ def _apply_coord_noise(
     try:
         noise = torch.randn_like(coords, generator=generator) * std_m
     except TypeError:
-        noise = torch.randn(
-            coords.shape,
-            device=coords.device,
-            dtype=coords.dtype) * std_m
+        noise = (
+            torch.randn(coords.shape, device=coords.device, dtype=coords.dtype) * std_m
+        )
     noise_lat = noise[..., 0] / m_per_deg_lat
     noise_lon = noise[..., 1] / m_per_deg_lon
     noisy = coords.clone()
@@ -272,9 +251,8 @@ def _apply_coord_noise(
 
 
 def _apply_input_drop(
-        attention: torch.Tensor,
-        drop_ratio: float,
-        generator: torch.Generator) -> torch.Tensor:
+    attention: torch.Tensor, drop_ratio: float, generator: torch.Generator
+) -> torch.Tensor:
     if drop_ratio <= 0:
         return attention
     drop_ratio = max(0.0, min(1.0, float(drop_ratio)))
@@ -285,21 +263,15 @@ def _apply_input_drop(
         if vlen <= 1:
             continue
         num = max(1, int(vlen * drop_ratio))
-        perm = torch.randperm(
-            vlen,
-            generator=generator,
-            device=attention.device)
+        perm = torch.randperm(vlen, generator=generator, device=attention.device)
         idx = perm[:num]
         out[b, idx] = 0.0
     return out
 
 
-def _build_prediction_mask(
-        attention: torch.Tensor,
-        pred_steps: int) -> torch.Tensor:
+def _build_prediction_mask(attention: torch.Tensor, pred_steps: int) -> torch.Tensor:
     bsz, seq_len = attention.shape
-    mask = torch.zeros((bsz, seq_len), dtype=torch.bool,
-                       device=attention.device)
+    mask = torch.zeros((bsz, seq_len), dtype=torch.bool, device=attention.device)
     for b in range(bsz):
         vlen = int(attention[b].sum().item())
         if vlen <= pred_steps:
@@ -359,7 +331,8 @@ def build_token_centroids(
         context = None
         if pack.context_index is not None:
             context = rb.context_tensor_from_index(
-                pack.context_index, coords, pack.ckpt_args["res1"])
+                pack.context_index, coords, pack.ckpt_args["res1"]
+            )
 
         with torch.no_grad():
             tokens_l0, tokens_l1, tokens_l2, _ = pack.tokenizer(
@@ -368,11 +341,7 @@ def build_token_centroids(
                 context,
                 attention_mask=attention,
             )
-        tokens = _pick_level(
-            tokens_l0,
-            tokens_l1,
-            tokens_l2,
-            level).cpu().numpy()
+        tokens = _pick_level(tokens_l0, tokens_l1, tokens_l2, level).cpu().numpy()
         coords_np = coords.cpu().numpy()
         attn_np = attention.cpu().numpy()
 
@@ -479,8 +448,11 @@ def evaluate_task(
     if getattr(args, "include_unknown", False):
         exclude_unknown = False
     unknown_id = None
-    if exclude_unknown and pack.ckpt_args.get(
-            "tokenizer") == "h3" and pack.ckpt_args.get("h3_vocab"):
+    if (
+        exclude_unknown
+        and pack.ckpt_args.get("tokenizer") == "h3"
+        and pack.ckpt_args.get("h3_vocab")
+    ):
         unknown_id = vocab - 1
 
     for batch in loader:
@@ -490,11 +462,11 @@ def evaluate_task(
         coords = coords_true.to(device)
         attention = attention_true.to(device)
         if args.input_drop_ratio > 0:
-            attention = _apply_input_drop(
-                attention, args.input_drop_ratio, generator)
+            attention = _apply_input_drop(attention, args.input_drop_ratio, generator)
         if args.coord_noise_std_m > 0:
             coords = _apply_coord_noise(
-                coords, attention, args.coord_noise_std_m, generator)
+                coords, attention, args.coord_noise_std_m, generator
+            )
 
         batch_in = {
             "coords": coords,
@@ -505,12 +477,10 @@ def evaluate_task(
 
         if task == "recovery":
             mask = rb.sample_mask(
-                attention_true.to(device),
-                args.mask_ratio,
-                generator=generator)
+                attention_true.to(device), args.mask_ratio, generator=generator
+            )
         else:
-            mask = _build_prediction_mask(
-                attention_true.to(device), args.pred_steps)
+            mask = _build_prediction_mask(attention_true.to(device), args.pred_steps)
 
         outputs, t0, t1, t2, _ = rb.forward_backbone(
             batch_in,
@@ -579,8 +549,7 @@ def _collect_regression_features(
         if drop_ratio > 0:
             attention = _apply_input_drop(attention, drop_ratio, generator)
         if noise_std_m > 0:
-            coords = _apply_coord_noise(
-                coords, attention, noise_std_m, generator)
+            coords = _apply_coord_noise(coords, attention, noise_std_m, generator)
 
         batch_in = {
             "coords": coords,
@@ -590,15 +559,17 @@ def _collect_regression_features(
         }
         if task == "recovery":
             mask = rb.sample_mask(
-                attention_true.to(device),
-                mask_ratio,
-                generator=generator)
+                attention_true.to(device), mask_ratio, generator=generator
+            )
         else:
-            mask = _build_prediction_mask(
-                attention_true.to(device), pred_steps)
+            mask = _build_prediction_mask(attention_true.to(device), pred_steps)
 
         outputs, _, _, _, _ = rb.forward_backbone(
-            batch_in, pack, device=device, max_len=max_len, mask=mask,
+            batch_in,
+            pack,
+            device=device,
+            max_len=max_len,
+            mask=mask,
         )
         step_hidden = outputs["step_hidden"].detach().cpu()
         mask_cpu = mask.cpu()
@@ -627,10 +598,8 @@ def _collect_regression_features(
                 nxt = vis_idx[vis_idx >= idx_t]
                 if prev.numel() == 0 and nxt.numel() == 0:
                     continue
-                p_idx = int(prev[-1].item()
-                            ) if prev.numel() > 0 else int(nxt[0].item())
-                n_idx = int(nxt[0].item()) if nxt.numel(
-                ) > 0 else int(prev[-1].item())
+                p_idx = int(prev[-1].item()) if prev.numel() > 0 else int(nxt[0].item())
+                n_idx = int(nxt[0].item()) if nxt.numel() > 0 else int(prev[-1].item())
 
                 p_coord = coords_obs[b, p_idx, :2]
                 n_coord = coords_obs[b, n_idx, :2]
@@ -676,16 +645,12 @@ def _collect_regression_features(
 
             feats.append(feat_t)
             anchors.append(anchor_t)
-            targets.append(
-                coords_cpu[b][selected_idx[: anchor_t.shape[0]], :2])
+            targets.append(coords_cpu[b][selected_idx[: anchor_t.shape[0]], :2])
 
     if not feats:
         fdim = int(pack.ckpt_args["embed_dim"]) + 4
         return torch.zeros((0, fdim)), torch.zeros((0, 2)), torch.zeros((0, 2))
-    return torch.cat(
-        feats, dim=0), torch.cat(
-        anchors, dim=0), torch.cat(
-            targets, dim=0)
+    return torch.cat(feats, dim=0), torch.cat(anchors, dim=0), torch.cat(targets, dim=0)
 
 
 def _train_regression_head(
@@ -720,8 +685,8 @@ def _train_regression_head(
         train_x = train_x[perm]
         train_yn = train_yn[perm]
         for start in range(0, train_x.shape[0], batch_size):
-            xb = train_x[start: start + batch_size]
-            yb = train_yn[start: start + batch_size]
+            xb = train_x[start : start + batch_size]
+            yb = train_yn[start : start + batch_size]
             pred = head(xb)
             loss = torch.nn.functional.mse_loss(pred, yb)
             opt.zero_grad(set_to_none=True)
@@ -731,8 +696,7 @@ def _train_regression_head(
             val_loss = torch.nn.functional.mse_loss(head(val_x), val_yn).item()
             if val_loss < best_val:
                 best_val = val_loss
-                best_state = {k: v.cpu().clone()
-                              for k, v in head.state_dict().items()}
+                best_state = {k: v.cpu().clone() for k, v in head.state_dict().items()}
     if best_state:
         head.load_state_dict(best_state)
     # Store normalization stats on the head for inference
@@ -742,9 +706,8 @@ def _train_regression_head(
 
 
 def _predict_with_head(
-        head: torch.nn.Linear,
-        x: torch.Tensor,
-        device: str) -> torch.Tensor:
+    head: torch.nn.Linear, x: torch.Tensor, device: str
+) -> torch.Tensor:
     x = x.to(device)
     with torch.no_grad():
         pred_n = head(x)
@@ -769,9 +732,16 @@ def evaluate_task_regression(
 
     print(f"  [regression] collecting {task} train features...")
     train_x, train_anchor, train_y = _collect_regression_features(
-        train_loader, pack, args.device, args.max_len, task,
-        args.mask_ratio, args.pred_steps, generator,
-        args.coord_noise_std_m, args.input_drop_ratio,
+        train_loader,
+        pack,
+        args.device,
+        args.max_len,
+        task,
+        args.mask_ratio,
+        args.pred_steps,
+        generator,
+        args.coord_noise_std_m,
+        args.input_drop_ratio,
     )
 
     if same_train_val:
@@ -779,9 +749,16 @@ def evaluate_task_regression(
     else:
         print(f"  [regression] collecting {task} val features...")
         val_x, val_anchor, val_y = _collect_regression_features(
-            val_loader, pack, args.device, args.max_len, task,
-            args.mask_ratio, args.pred_steps, generator,
-            args.coord_noise_std_m, args.input_drop_ratio,
+            val_loader,
+            pack,
+            args.device,
+            args.max_len,
+            task,
+            args.mask_ratio,
+            args.pred_steps,
+            generator,
+            args.coord_noise_std_m,
+            args.input_drop_ratio,
         )
 
     if same_train_test:
@@ -789,9 +766,16 @@ def evaluate_task_regression(
     else:
         print(f"  [regression] collecting {task} test features...")
         test_x, test_anchor, test_y = _collect_regression_features(
-            test_loader, pack, args.device, args.max_len, task,
-            args.mask_ratio, args.pred_steps, generator,
-            args.coord_noise_std_m, args.input_drop_ratio,
+            test_loader,
+            pack,
+            args.device,
+            args.max_len,
+            task,
+            args.mask_ratio,
+            args.pred_steps,
+            generator,
+            args.coord_noise_std_m,
+            args.input_drop_ratio,
         )
     print(
         f"  [regression] train={train_x.shape[0]} "
@@ -806,7 +790,10 @@ def evaluate_task_regression(
     train_res = train_y - train_anchor
     val_res = val_y - val_anchor
     head = _train_regression_head(
-        train_x, train_res, val_x, val_res,
+        train_x,
+        train_res,
+        val_x,
+        val_res,
         epochs=args.regression_epochs,
         lr=args.regression_lr,
         batch_size=args.regression_batch_size,
@@ -818,10 +805,8 @@ def evaluate_task_regression(
     val_pred = val_anchor + val_pred_res
     d_val_base = _distance_m(val_anchor, val_y, coord_mode)
     d_val_res = _distance_m(val_pred, val_y, coord_mode)
-    mae_val_base = float(d_val_base.mean().item()
-                         ) if d_val_base.numel() > 0 else 0.0
-    mae_val_res = float(d_val_res.mean().item()
-                        ) if d_val_res.numel() > 0 else 0.0
+    mae_val_base = float(d_val_base.mean().item()) if d_val_base.numel() > 0 else 0.0
+    mae_val_res = float(d_val_res.mean().item()) if d_val_res.numel() > 0 else 0.0
     use_residual = mae_val_res <= mae_val_base * 1.02
 
     results = {}
@@ -836,16 +821,16 @@ def evaluate_task_regression(
             pred = sb
         d = _distance_m(pred, sy, coord_mode)
         mae = float(d.mean().item()) if d.numel() > 0 else 0.0
-        rmse = float(torch.sqrt((d ** 2).mean()).item()
-                     ) if d.numel() > 0 else 0.0
+        rmse = float(torch.sqrt((d**2).mean()).item()) if d.numel() > 0 else 0.0
         results[split_name] = EvalResult(
-            mae_m=mae, rmse_m=rmse, n=int(
-                d.numel())).__dict__
+            mae_m=mae, rmse_m=rmse, n=int(d.numel())
+        ).__dict__
 
     results["_meta"] = {
         "strategy": (
             "anchor_interpolation_plus_residual"
-            if use_residual else "anchor_interpolation_only"
+            if use_residual
+            else "anchor_interpolation_only"
         ),
         "val_anchor_mae_m": mae_val_base,
         "val_residual_mae_m": mae_val_res,
@@ -864,19 +849,16 @@ def run_eval(args) -> Dict:
     local_data = args.local_data or pack.ckpt_args.get("local_data", "")
     if not local_data:
         raise ValueError(
-            "No local_data provided and checkpoint args do not include "
-            "local_data"
+            "No local_data provided and checkpoint args do not include local_data"
         )
     if not Path(local_data).exists():
         raise FileNotFoundError(f"local_data not found: {local_data}")
 
     raw_records = rb.load_local_data(local_data)
-    coord_order = infer_coord_order_stats(
-        raw_records, sample_limit=args.sample_limit)
+    coord_order = infer_coord_order_stats(raw_records, sample_limit=args.sample_limit)
     dataset = rb.FixedTrajectoryDataset(
-        raw_records,
-        max_len=args.max_len,
-        sample_limit=args.sample_limit)
+        raw_records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
     if len(dataset) < 10:
         raise RuntimeError(f"not enough samples: {len(dataset)}")
 
@@ -891,15 +873,15 @@ def run_eval(args) -> Dict:
     else:
         _, coord_max_abs = infer_coord_mode(dataset)
 
-    split_modes = [
-        "random",
-        "temporal"] if args.split_mode == "both" else [
-        args.split_mode]
+    split_modes = (
+        ["random", "temporal"] if args.split_mode == "both" else [args.split_mode]
+    )
     # Default exclude_unknown to True when an H3 vocab is present, unless
     # explicitly overridden.
     if getattr(args, "exclude_unknown", None) is None:
-        args.exclude_unknown = bool(pack.ckpt_args.get(
-            "tokenizer") == "h3" and pack.ckpt_args.get("h3_vocab"))
+        args.exclude_unknown = bool(
+            pack.ckpt_args.get("tokenizer") == "h3" and pack.ckpt_args.get("h3_vocab")
+        )
     if getattr(args, "include_unknown", False):
         args.exclude_unknown = False
     results = {
@@ -930,50 +912,37 @@ def run_eval(args) -> Dict:
             full_idx = list(range(len(dataset)))
             train_idx, val_idx, test_idx = full_idx, full_idx, full_idx
             train_loader = _make_loader(
-                dataset,
-                train_idx,
-                args.batch_size,
-                args.num_workers,
-                shuffle=False)
+                dataset, train_idx, args.batch_size, args.num_workers, shuffle=False
+            )
             val_loader = train_loader
             test_loader = train_loader
         else:
             train_idx, val_idx, test_idx = rb.split_indices(
-                dataset, mode=mode, seed=args.seed)
+                dataset, mode=mode, seed=args.seed
+            )
             train_loader = _make_loader(
-                dataset,
-                train_idx,
-                args.batch_size,
-                args.num_workers,
-                shuffle=False)
+                dataset, train_idx, args.batch_size, args.num_workers, shuffle=False
+            )
             val_loader = _make_loader(
-                dataset,
-                val_idx,
-                args.batch_size,
-                args.num_workers,
-                shuffle=False)
+                dataset, val_idx, args.batch_size, args.num_workers, shuffle=False
+            )
             test_loader = _make_loader(
-                dataset,
-                test_idx,
-                args.batch_size,
-                args.num_workers,
-                shuffle=False)
+                dataset, test_idx, args.batch_size, args.num_workers, shuffle=False
+            )
 
         rng = torch.Generator(device=args.device)
         rng.manual_seed(args.seed + 13)
 
-        need_centroids = (
-            not bool(
-                args.use_regression)) or bool(
-            args.include_centroid_baseline)
+        need_centroids = (not bool(args.use_regression)) or bool(
+            args.include_centroid_baseline
+        )
         centroids = None
         used = 0
         centroid_source = "skipped"
         if need_centroids:
             centroid_limit = args.centroid_samples
             if centroid_limit <= 0 and args.centroid_fraction > 0:
-                centroid_limit = max(
-                    1, int(len(train_idx) * args.centroid_fraction))
+                centroid_limit = max(1, int(len(train_idx) * args.centroid_fraction))
 
             if (
                 centroid_limit <= 0
@@ -982,7 +951,8 @@ def run_eval(args) -> Dict:
             ):
                 try:
                     centroids = load_h3_centroids(
-                        pack.ckpt_args.get("h3_vocab"), args.centroid_level)
+                        pack.ckpt_args.get("h3_vocab"), args.centroid_level
+                    )
                     centroid_source = "h3"
                 except Exception as exc:
                     print(
@@ -1006,17 +976,20 @@ def run_eval(args) -> Dict:
             "centroid_samples_used": used,
             "centroid_source": centroid_source,
         }
-        tasks = [
-            "recovery",
-            "prediction"] if args.task == "both" else [
-            args.task]
+        tasks = ["recovery", "prediction"] if args.task == "both" else [args.task]
 
         use_regression = getattr(args, "use_regression", False)
         for task in tasks:
             if use_regression:
                 split_results[task] = evaluate_task_regression(
-                    train_loader, val_loader, test_loader,
-                    pack, task, args, rng, coord_mode,
+                    train_loader,
+                    val_loader,
+                    test_loader,
+                    pack,
+                    task,
+                    args,
+                    rng,
+                    coord_mode,
                 )
                 if bool(args.include_centroid_baseline):
                     split_results[task + "_centroid"] = {
@@ -1051,7 +1024,8 @@ def run_eval(args) -> Dict:
                         task,
                         args,
                         rng,
-                        coord_mode).__dict__,
+                        coord_mode,
+                    ).__dict__,
                     "val": evaluate_task(
                         val_loader,
                         pack,
@@ -1060,7 +1034,8 @@ def run_eval(args) -> Dict:
                         task,
                         args,
                         rng,
-                        coord_mode).__dict__,
+                        coord_mode,
+                    ).__dict__,
                     "test": evaluate_task(
                         test_loader,
                         pack,
@@ -1069,7 +1044,8 @@ def run_eval(args) -> Dict:
                         task,
                         args,
                         rng,
-                        coord_mode).__dict__,
+                        coord_mode,
+                    ).__dict__,
                 }
 
         results["splits"][mode] = split_results

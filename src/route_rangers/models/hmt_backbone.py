@@ -8,7 +8,9 @@ from torch import nn
 class RotaryEmbedding(nn.Module):
     def __init__(self, embedding_dim: int, max_seq_len: int = 512):
         super().__init__()
-        inv_freq = 1.0 / (10000 ** (torch.arange(0, embedding_dim, 2).float() / embedding_dim))
+        inv_freq = 1.0 / (
+            10000 ** (torch.arange(0, embedding_dim, 2).float() / embedding_dim)
+        )
         positions = torch.arange(max_seq_len).float()
         sinusoid_input = torch.einsum("i, j -> i j", positions, inv_freq)
         self.register_buffer("sin", sinusoid_input.sin(), persistent=False)
@@ -56,18 +58,24 @@ class MaskedAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         self.to_qkv = nn.Linear(embedding_dim, inner_dim * 3, bias=False)
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, embedding_dim), nn.Dropout(dropout))
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, embedding_dim), nn.Dropout(dropout)
+        )
 
         if head_dim % 2 != 0:
             raise ValueError("head_dim must be even for RoPE")
         self.rotary_emb = RotaryEmbedding(head_dim, max_seq_len=max_seq_len)
 
-    def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         b, n, _ = x.shape
         x = self.norm(x)
 
         qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = [t.view(b, n, self.num_heads, self.head_dim).transpose(1, 2) for t in qkv]
+        q, k, v = [
+            t.view(b, n, self.num_heads, self.head_dim).transpose(1, 2) for t in qkv
+        ]
 
         sin, cos = self.rotary_emb(n)
 
@@ -80,14 +88,20 @@ class MaskedAttention(nn.Module):
         if attn_mask is not None:
             if attn_mask.dtype != torch.bool:
                 attn_mask = attn_mask > 0
-            attn_scores = attn_scores.masked_fill(~attn_mask.unsqueeze(1), float("-inf"))
+            attn_scores = attn_scores.masked_fill(
+                ~attn_mask.unsqueeze(1), float("-inf")
+            )
 
         attn_probs = self.attend(attn_scores)
-        attn_probs = attn_probs.nan_to_num(0.0)  # padding rows: softmax([-inf,...]) → NaN → 0
+        attn_probs = attn_probs.nan_to_num(
+            0.0
+        )  # padding rows: softmax([-inf,...]) → NaN → 0
         attn_probs = self.dropout(attn_probs)
 
         out = torch.matmul(attn_probs, v)
-        out = out.transpose(1, 2).contiguous().view(b, n, self.num_heads * self.head_dim)
+        out = (
+            out.transpose(1, 2).contiguous().view(b, n, self.num_heads * self.head_dim)
+        )
         return self.to_out(out)
 
 
@@ -120,7 +134,9 @@ class MaskedTransformer(nn.Module):
                 )
             )
 
-    def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         for attn_layer, ff_layer in self.layers:
             x = attn_layer(x, attn_mask=attn_mask) + x
             x = ff_layer(x) + x
@@ -144,13 +160,20 @@ class GraphAttention(nn.Module):
         self.norm = nn.LayerNorm(embedding_dim)
         self.dropout = nn.Dropout(dropout)
         self.to_qkv = nn.Linear(embedding_dim, inner_dim * 3, bias=False)
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, embedding_dim), nn.Dropout(dropout))
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, embedding_dim), nn.Dropout(dropout)
+        )
 
-    def forward(self, x: torch.Tensor, graph_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, graph_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         bsz, seq_len, _ = x.shape
         h = self.norm(x)
         qkv = self.to_qkv(h).chunk(3, dim=-1)
-        q, k, v = [t.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2) for t in qkv]
+        q, k, v = [
+            t.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+            for t in qkv
+        ]
 
         scores = torch.matmul(q, k.transpose(-1, -2)) * self.scale
         if graph_mask is not None:
@@ -165,7 +188,11 @@ class GraphAttention(nn.Module):
         probs = torch.softmax(scores, dim=-1)
         probs = self.dropout(probs)
         out = torch.matmul(probs, v)
-        out = out.transpose(1, 2).contiguous().view(bsz, seq_len, self.num_heads * self.head_dim)
+        out = (
+            out.transpose(1, 2)
+            .contiguous()
+            .view(bsz, seq_len, self.num_heads * self.head_dim)
+        )
         return self.to_out(out)
 
 

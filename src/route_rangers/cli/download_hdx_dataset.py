@@ -48,7 +48,9 @@ def _infer_filename(resource: dict) -> str:
     return _sanitize_filename(resource.get("id", "resource"))
 
 
-def _iter_resources(resources: Iterable[dict], formats: Optional[set]) -> Iterable[dict]:
+def _iter_resources(
+    resources: Iterable[dict], formats: Optional[set]
+) -> Iterable[dict]:
     for res in resources:
         fmt = (res.get("format") or "").lower()
         if formats and fmt not in formats:
@@ -93,25 +95,54 @@ def _download(url: str, out_path: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Download HDX dataset resources via CKAN API")
-    parser.add_argument("--dataset", required=True, help="HDX dataset slug or id, e.g., movement-distribution")
-    parser.add_argument("--output_dir", default="", help="Output directory (default: data/hdx/<dataset>)")
-    parser.add_argument("--download", action="store_true", help="Download resources instead of listing only")
+    parser = argparse.ArgumentParser(
+        description="Download HDX dataset resources via CKAN API"
+    )
+    parser.add_argument(
+        "--dataset",
+        required=True,
+        help="HDX dataset slug or id, e.g., movement-distribution",
+    )
+    parser.add_argument(
+        "--output_dir",
+        default="",
+        help="Output directory (default: data/hdx/<dataset>)",
+    )
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Download resources instead of listing only",
+    )
     parser.add_argument(
         "--formats",
         default="",
-        help="Comma-separated list of formats to download (e.g., csv,geojson,zip). Empty means all.",
+        help=(
+            "Comma-separated list of formats to download "
+            "(e.g., csv,geojson,zip). Empty means all."
+        ),
     )
-    parser.add_argument("--max_resources", type=int, default=0, help="Limit downloads/listing to N resources")
+    parser.add_argument(
+        "--max_resources",
+        type=int,
+        default=0,
+        help="Limit downloads/listing to N resources",
+    )
     parser.add_argument(
         "--latest_months",
         type=int,
         default=0,
-        help="If >0, select latest N unique months based on dates in resource names/urls.",
+        help=(
+            "If >0, select latest N unique months based on dates "
+            "in resource names/urls."
+        ),
     )
     args = parser.parse_args()
 
-    out_dir = Path(args.output_dir) if args.output_dir else Path("data") / "hdx" / args.dataset
+    out_dir = (
+        Path(args.output_dir)
+        if args.output_dir
+        else Path("data") / "hdx" / args.dataset
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     params = {"id": args.dataset}

@@ -30,7 +30,9 @@ def iter_zip_paths(input_dir: Path) -> Iterable[Path]:
         yield p
 
 
-def load_csv_from_zip(zf: zipfile.ZipFile, name: str, usecols: Optional[list]) -> pd.DataFrame:
+def load_csv_from_zip(
+    zf: zipfile.ZipFile, name: str, usecols: Optional[list]
+) -> pd.DataFrame:
     with zf.open(name) as f:
         if usecols:
             return pd.read_csv(f, usecols=usecols)
@@ -38,14 +40,28 @@ def load_csv_from_zip(zf: zipfile.ZipFile, name: str, usecols: Optional[list]) -
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Prepare Movement Distribution data into month-level tensors.")
-    parser.add_argument("--input_dir", required=True, help="Directory with Movement Distribution zip files")
+    parser = argparse.ArgumentParser(
+        description="Prepare Movement Distribution data into month-level tensors."
+    )
+    parser.add_argument(
+        "--input_dir",
+        required=True,
+        help="Directory with Movement Distribution zip files",
+    )
     parser.add_argument("--output", required=True, help="Output .npz path")
-    parser.add_argument("--max_zips", type=int, default=0, help="Limit number of zip files (0 = all)")
-    parser.add_argument("--max_csv_per_zip", type=int, default=0, help="Limit CSVs per zip (0 = all)")
+    parser.add_argument(
+        "--max_zips", type=int, default=0, help="Limit number of zip files (0 = all)"
+    )
+    parser.add_argument(
+        "--max_csv_per_zip", type=int, default=0, help="Limit CSVs per zip (0 = all)"
+    )
     parser.add_argument("--aggregate", choices=["monthly", "daily"], default="monthly")
-    parser.add_argument("--latest_months", type=int, default=0, help="Keep only latest N months")
-    parser.add_argument("--keep_columns", action="store_true", help="Store per-region metadata arrays")
+    parser.add_argument(
+        "--latest_months", type=int, default=0, help="Keep only latest N months"
+    )
+    parser.add_argument(
+        "--keep_columns", action="store_true", help="Store per-region metadata arrays"
+    )
     args = parser.parse_args()
 
     input_dir = Path(args.input_dir)
@@ -65,7 +81,11 @@ def main() -> int:
 
     for zp in zip_paths:
         with zipfile.ZipFile(zp, "r") as zf:
-            names = [n for n in zf.namelist() if n.lower().endswith(".csv") and "macosx" not in n.lower()]
+            names = [
+                n
+                for n in zf.namelist()
+                if n.lower().endswith(".csv") and "macosx" not in n.lower()
+            ]
             names = sorted(names)
             if args.max_csv_per_zip > 0:
                 names = names[: args.max_csv_per_zip]
@@ -116,7 +136,9 @@ def main() -> int:
 
                 # Track region metadata once per file.
                 if id_col in df.columns:
-                    meta_cols = [c for c in [id_col, name_col, country_col, level_col] if c]
+                    meta_cols = [
+                        c for c in [id_col, name_col, country_col, level_col] if c
+                    ]
                     meta_df = df[meta_cols].drop_duplicates(subset=[id_col])
                     for _, row in meta_df.iterrows():
                         rid = str(row[id_col])
@@ -128,7 +150,11 @@ def main() -> int:
                             "polygon_level": int(row[level_col]) if level_col else -1,
                         }
 
-                grouped = df.groupby([id_col, cat_col], sort=False)[frac_col].agg(["sum", "count"]).reset_index()
+                grouped = (
+                    df.groupby([id_col, cat_col], sort=False)[frac_col]
+                    .agg(["sum", "count"])
+                    .reset_index()
+                )
                 for _, row in grouped.iterrows():
                     rid = str(row[id_col])
                     cat = str(row[cat_col])
@@ -180,7 +206,12 @@ def main() -> int:
         meta_path = out_path.with_suffix(".meta.json")
         meta_path.write_text(json.dumps(region_meta, indent=2))
 
-    print(f"saved {out_path} records={num_records} regions={len(regions)} times={len(time_keys)} categories={len(categories)}")
+    print(
+        f"saved {out_path} records={num_records} "
+        f"regions={len(regions)} "
+        f"times={len(time_keys)} "
+        f"categories={len(categories)}"
+    )
     return 0
 
 

@@ -15,17 +15,25 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from route_rangers.cli.run_benchmarks import forward_backbone, load_backbone, sample_mask  # noqa: E402
+from route_rangers.cli.run_benchmarks import (  # noqa: E402
+    forward_backbone,
+    load_backbone,
+    sample_mask,
+)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate length sensitivity for a trajectory model.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate length sensitivity for a trajectory model."
+    )
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--local_data", type=str, required=True)
     parser.add_argument("--max_len", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample_limit", type=int, default=0)
     parser.add_argument("--mask_ratio", type=float, default=0.3)
@@ -33,11 +41,21 @@ def parse_args():
         "--dest_mask_last_k",
         type=int,
         default=1,
-        help="Mask last K valid points when computing destination metrics to avoid trivial copying (0 disables).",
+        help=(
+            "Mask last K valid points when computing destination metrics "
+            "to avoid trivial copying (0 disables)."
+        ),
     )
-    parser.add_argument("--length_bins", type=str, default="", help="Comma-separated raw length cutoffs, e.g. 50,200")
-    # Default name matches scripts/collect_results.py glob: cache/length_sensitivity_*.json
-    parser.add_argument("--output", type=str, default="cache/length_sensitivity_latest.json")
+    parser.add_argument(
+        "--length_bins",
+        type=str,
+        default="",
+        help="Comma-separated raw length cutoffs, e.g. 50,200",
+    )
+    # Default name matches collect_results.py glob: cache/length_sensitivity_*.json
+    parser.add_argument(
+        "--output", type=str, default="cache/length_sensitivity_latest.json"
+    )
     return parser.parse_args()
 
 
@@ -191,7 +209,9 @@ def collate_fixed(batch: List[dict]) -> dict:
         "timestamps": torch.stack([b["timestamps"] for b in batch], dim=0),
         "attention_mask": torch.stack([b["attention_mask"] for b in batch], dim=0),
         "raw_length": torch.tensor([b["raw_length"] for b in batch], dtype=torch.long),
-        "effective_length": torch.tensor([b["effective_length"] for b in batch], dtype=torch.long),
+        "effective_length": torch.tensor(
+            [b["effective_length"] for b in batch], dtype=torch.long
+        ),
     }
 
 
@@ -214,7 +234,15 @@ def bin_name_for_length(length: int, bins: np.ndarray) -> str:
     return "long"
 
 
-def update_bin_metrics(store: dict, name: str, recon_correct: float, recon_total: float, dest_correct: float, dest_nll: float, dest_entropy: float):
+def update_bin_metrics(
+    store: dict,
+    name: str,
+    recon_correct: float,
+    recon_total: float,
+    dest_correct: float,
+    dest_nll: float,
+    dest_entropy: float,
+):
     bucket = store.setdefault(
         name,
         {
@@ -237,7 +265,9 @@ def update_bin_metrics(store: dict, name: str, recon_correct: float, recon_total
 def finalize_metrics(store: dict) -> Dict[str, dict]:
     out = {}
     for name, b in store.items():
-        recon_acc = b["recon_correct_l1"] / b["recon_total"] if b["recon_total"] > 0 else 0.0
+        recon_acc = (
+            b["recon_correct_l1"] / b["recon_total"] if b["recon_total"] > 0 else 0.0
+        )
         dest_top1 = b["dest_correct"] / b["samples"] if b["samples"] > 0 else 0.0
         dest_nll = b["dest_nll_sum"] / b["samples"] if b["samples"] > 0 else 0.0
         dest_entropy = b["dest_entropy_sum"] / b["samples"] if b["samples"] > 0 else 0.0
@@ -259,10 +289,14 @@ def main():
     if not Path(args.local_data).exists():
         raise FileNotFoundError(f"local_data not found: {args.local_data}")
 
-    pack = load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
+    pack = load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
 
     records = load_local_data(args.local_data)
-    dataset = FixedTrajectoryDataset(records, max_len=args.max_len, sample_limit=args.sample_limit)
+    dataset = FixedTrajectoryDataset(
+        records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
     if len(dataset) < 10:
         raise RuntimeError(f"not enough samples for length sensitivity: {len(dataset)}")
 
@@ -285,7 +319,8 @@ def main():
         attention = batch["attention_mask"].to(args.device)
         recon_mask = sample_mask(attention, args.mask_ratio, generator=rng)
 
-        # Prevent destination triviality by masking the last point(s) before computing dest logits.
+        # Prevent destination triviality by masking the last point(s)
+        # before computing dest logits.
         dest_mask = torch.zeros_like(recon_mask)
         if args.dest_mask_last_k > 0:
             vlen = attention.sum(dim=1).long().clamp(min=1)
@@ -297,7 +332,9 @@ def main():
 
         recon_mask = recon_mask & ~dest_mask
         mask = recon_mask | dest_mask
-        outputs, _, t1, _, _ = forward_backbone(batch, pack, device=args.device, max_len=args.max_len, mask=mask)
+        outputs, _, t1, _, _ = forward_backbone(
+            batch, pack, device=args.device, max_len=args.max_len, mask=mask
+        )
 
         p1 = outputs["step_logits"]["l1"].argmax(dim=-1)
         correct = (p1 == t1.to(args.device)) & recon_mask
@@ -308,10 +345,19 @@ def main():
         last_idx = attention.sum(dim=1).long().clamp(min=1) - 1
         dest_targets = t1.to(args.device).gather(1, last_idx.unsqueeze(1)).squeeze(1)
         dest_pred = dest_logits.argmax(dim=-1)
-        dest_correct = (dest_pred == dest_targets).detach().cpu().numpy().astype(np.float32)
-        dest_nll = F.cross_entropy(dest_logits.float(), dest_targets, reduction="none").detach().cpu().numpy()
+        dest_correct = (
+            (dest_pred == dest_targets).detach().cpu().numpy().astype(np.float32)
+        )
+        dest_nll = (
+            F.cross_entropy(dest_logits.float(), dest_targets, reduction="none")
+            .detach()
+            .cpu()
+            .numpy()
+        )
         probs = torch.softmax(dest_logits.float(), dim=-1)
-        dest_entropy = (-probs * torch.log(probs + 1e-9)).sum(dim=-1).detach().cpu().numpy()
+        dest_entropy = (
+            (-probs * torch.log(probs + 1e-9)).sum(dim=-1).detach().cpu().numpy()
+        )
 
         raw_len = batch["raw_length"].detach().cpu().numpy()
 
@@ -331,10 +377,12 @@ def main():
     gap = {}
     if "short" in metrics and "long" in metrics:
         gap = {
-            "recon_acc_l1": metrics["long"]["recon_acc_l1"] - metrics["short"]["recon_acc_l1"],
+            "recon_acc_l1": metrics["long"]["recon_acc_l1"]
+            - metrics["short"]["recon_acc_l1"],
             "dest_top1": metrics["long"]["dest_top1"] - metrics["short"]["dest_top1"],
             "dest_nll": metrics["long"]["dest_nll"] - metrics["short"]["dest_nll"],
-            "dest_entropy": metrics["long"]["dest_entropy"] - metrics["short"]["dest_entropy"],
+            "dest_entropy": metrics["long"]["dest_entropy"]
+            - metrics["short"]["dest_entropy"],
         }
 
     out = {
