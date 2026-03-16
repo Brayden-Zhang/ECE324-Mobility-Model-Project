@@ -20,12 +20,17 @@ slurm-*.out
 
 # Data files
 /data/
+/proposal/data/
 
 # External cloned repos
 /external/
 
 # Docs (local notes/drafts)
-/docs/
+/docs/*
+!/docs/README.md
+!/docs/foundation_evals.md
+!/docs/neurips_experiments.md
+!/docs/neurips_paper_draft.md
 
 # Optional extension modules not in paper scope
 train_geosight.py

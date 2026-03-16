@@ -1,3 +1,14 @@
+Metadata-Version: 2.4
+Name: route-rangers
+Version: 0.1.0
+Summary: Mobility model project scaffolded with a CCDS layout.
+Author: Route Rangers
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: ruff>=0.11; extra == "dev"
+
 # Route Rangers: TrajectoryFM-HMT
 
 Implementation of the TrajectoryFM-HMT pipeline for trajectory representation learning, length-sensitivity analysis, and UniTraj-style evaluation.
