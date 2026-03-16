@@ -489,6 +489,122 @@ def summarize_unitraj_regression(cache_dir: str) -> str:
     return "\n".join(parts)
 
 
+def summarize_proposal_baselines(cache_dir: str) -> str:
+    files = latest_files(os.path.join(cache_dir, "proposal_baselines*.json"))
+    if not files:
+        return "No proposal baseline results yet."
+    path = files[-1]
+    obj = _safe_read_json(path)
+    if not obj:
+        return "No proposal baseline results yet."
+    split_name, split = _pick_split(obj)
+    if not split:
+        return f"latest: `{Path(path).name}` (no split payload)"
+
+    mean_next = (
+        split.get("mean_displacement", {})
+        .get("next_location_regression_probe", {})
+        .get("test", {})
+    )
+    mean_dest = (
+        split.get("mean_displacement", {})
+        .get("destination_regression_probe", {})
+        .get("test", {})
+    )
+    rnn_next = (
+        split.get("simple_rnn", {})
+        .get("next_location_regression_probe", {})
+        .get("test", {})
+    )
+    rnn_dest = (
+        split.get("simple_rnn", {})
+        .get("destination_regression_probe", {})
+        .get("test", {})
+    )
+    lines = [f"latest: `{Path(path).name}`", f"- split: {split_name}"]
+    lines.append("| baseline | next MAE (m) | next RMSE (m) | dest MAE (m) | dest RMSE (m) |")
+    lines.append("|---|---|---|---|---|")
+    lines.append(
+        f"| mean_displacement | {mean_next.get('mae_m', 0.0):.1f} | "
+        f"{mean_next.get('rmse_m', 0.0):.1f} | {mean_dest.get('mae_m', 0.0):.1f} | "
+        f"{mean_dest.get('rmse_m', 0.0):.1f} |"
+    )
+    lines.append(
+        f"| simple_rnn | {rnn_next.get('mae_m', 0.0):.1f} | "
+        f"{rnn_next.get('rmse_m', 0.0):.1f} | {rnn_dest.get('mae_m', 0.0):.1f} | "
+        f"{rnn_dest.get('rmse_m', 0.0):.1f} |"
+    )
+    return "\n".join(lines)
+
+
+def summarize_od_eval(cache_dir: str) -> str:
+    files = latest_files(os.path.join(cache_dir, "od_eval*.json"))
+    if not files:
+        return "No OD-matrix evaluation results yet."
+    path = files[-1]
+    obj = _safe_read_json(path)
+    if not obj:
+        return "No OD-matrix evaluation results yet."
+    split_name, split = _pick_split(obj)
+    if not split:
+        return f"latest: `{Path(path).name}` (no split payload)"
+    test = split.get("test", {})
+    meta = split.get("meta", {})
+    lines = [f"latest: `{Path(path).name}`", f"- split: {split_name}"]
+    lines.append(
+        f"- test: mae={test.get('mae', 0.0):.3f}, rmse={test.get('rmse', 0.0):.3f}, "
+        f"mape={test.get('mape', 0.0):.3f}, rows={test.get('n_rows', 0)}"
+    )
+    lines.append(
+        f"- meta: zones={meta.get('num_zones', 0)}, times={meta.get('num_times', 0)}"
+    )
+    return "\n".join(lines)
+
+
+def summarize_length_uncertainty(cache_dir: str) -> str:
+    files = latest_files(os.path.join(cache_dir, "length_uncertainty*.json"))
+    if not files:
+        return "No length-uncertainty results yet."
+    path = files[-1]
+    obj = _safe_read_json(path)
+    if not obj:
+        return "No length-uncertainty results yet."
+    metrics = obj.get("metrics", {})
+    if not metrics:
+        return "No length-uncertainty results yet."
+    lines = [f"latest: `{Path(path).name}`"]
+    lines.append("| bucket | next NLL | next entropy | dest NLL | dest entropy | dest ECE |")
+    lines.append("|---|---|---|---|---|---|")
+    for b in ("short", "medium", "long"):
+        m = metrics.get(b, {})
+        lines.append(
+            f"| {b} | {m.get('next_step_nll', 0.0):.4f} | "
+            f"{m.get('next_step_entropy', 0.0):.4f} | {m.get('dest_nll', 0.0):.4f} | "
+            f"{m.get('dest_entropy', 0.0):.4f} | {m.get('dest_ece', 0.0):.4f} |"
+        )
+    return "\n".join(lines)
+
+
+def summarize_embedding_length_probe(cache_dir: str) -> str:
+    files = latest_files(os.path.join(cache_dir, "embedding_length_probe*.json"))
+    if not files:
+        return "No embedding-length probe results yet."
+    path = files[-1]
+    obj = _safe_read_json(path)
+    if not obj:
+        return "No embedding-length probe results yet."
+    split_name, split = _pick_split(obj)
+    if not split:
+        return f"latest: `{Path(path).name}` (no split payload)"
+    test = split.get("test", {})
+    lines = [f"latest: `{Path(path).name}`", f"- split: {split_name}"]
+    lines.append(
+        f"- test: acc={test.get('accuracy', 0.0):.3f}, "
+        f"macro_f1={test.get('macro_f1', 0.0):.3f}, n={test.get('n', 0)}"
+    )
+    return "\n".join(lines)
+
+
 def replace_block(text: str, start: str, end: str, new_block: str) -> str:
     if start not in text or end not in text:
         return text
@@ -540,13 +656,25 @@ def main():
     trip_class_md = summarize_trip_classification(cache_dir)
     sim_retrieval_md = summarize_similarity_retrieval(cache_dir)
     unitraj_reg_md = summarize_unitraj_regression(cache_dir)
+    baseline_md = summarize_proposal_baselines(cache_dir)
+    od_md = summarize_od_eval(cache_dir)
+    uncertainty_md = summarize_length_uncertainty(cache_dir)
+    emb_len_probe_md = summarize_embedding_length_probe(cache_dir)
 
     summary = "\n\n".join(
         [
             "### Benchmarks (random split, test)",
             bench_md,
+            "### Proposal Baselines",
+            baseline_md,
             "### Length sensitivity",
             length_md,
+            "### Length Uncertainty",
+            uncertainty_md,
+            "### Embedding Length Probe",
+            emb_len_probe_md,
+            "### OD Matrix Evaluation",
+            od_md,
             "### Invariance suite",
             invariance_md,
             "### Embedding retrieval",

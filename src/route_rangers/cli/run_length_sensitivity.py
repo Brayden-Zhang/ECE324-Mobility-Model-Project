@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -19,6 +20,13 @@ from route_rangers.cli.run_benchmarks import (  # noqa: E402
     forward_backbone,
     load_backbone,
     sample_mask,
+)
+from route_rangers.eval.length_utils import (  # noqa: E402
+    aggregate_length_metrics,
+    bin_name_for_length,
+    expected_calibration_error,
+    gap_decision_from_seed_values,
+    parse_bins,
 )
 
 
@@ -51,6 +59,50 @@ def parse_args():
         type=str,
         default="",
         help="Comma-separated raw length cutoffs, e.g. 50,200",
+    )
+    parser.add_argument(
+        "--num_seeds",
+        type=int,
+        default=3,
+        help="Number of evaluation seeds when --seeds is not provided.",
+    )
+    parser.add_argument(
+        "--seeds",
+        type=str,
+        default="",
+        help="Explicit comma-separated seed list, e.g. 42,43,44",
+    )
+    parser.add_argument(
+        "--ci_method",
+        type=str,
+        default="seed",
+        choices=["seed", "bootstrap"],
+    )
+    parser.add_argument("--bootstrap_iters", type=int, default=2000)
+    parser.add_argument("--alpha", type=float, default=0.05)
+    parser.add_argument(
+        "--variability_k",
+        type=float,
+        default=1.0,
+        help="Decision multiplier for variability-aware gap threshold.",
+    )
+    parser.add_argument(
+        "--gap_tolerance",
+        type=float,
+        default=0.0,
+        help="Absolute minimum tolerance for short-vs-long performance gaps.",
+    )
+    parser.add_argument(
+        "--primary_gap_metric",
+        type=str,
+        default="dest_top1",
+        choices=["recon_acc_l1", "next_step_top1", "dest_top1", "dest_nll"],
+    )
+    parser.add_argument(
+        "--ece_bins",
+        type=int,
+        default=10,
+        help="Number of confidence bins for destination ECE.",
     )
     # Default name matches collect_results.py glob: cache/length_sensitivity_*.json
     parser.add_argument(
@@ -215,94 +267,121 @@ def collate_fixed(batch: List[dict]) -> dict:
     }
 
 
-def parse_bins(length_bins: str, lengths: np.ndarray) -> Tuple[np.ndarray, str]:
-    if length_bins:
-        parts = [int(p.strip()) for p in length_bins.split(",") if p.strip()]
-        parts = sorted(set(parts))
-        return np.asarray(parts, dtype=np.int64), "fixed"
-    if lengths.size == 0:
-        return np.asarray([0, 0], dtype=np.int64), "quantile"
-    q1, q2 = np.quantile(lengths, [0.33, 0.66])
-    return np.asarray([int(q1), int(q2)], dtype=np.int64), "quantile"
-
-
-def bin_name_for_length(length: int, bins: np.ndarray) -> str:
-    if length <= bins[0]:
-        return "short"
-    if length <= bins[1]:
-        return "medium"
-    return "long"
-
-
 def update_bin_metrics(
     store: dict,
     name: str,
     recon_correct: float,
     recon_total: float,
+    next_correct: float,
+    next_total: float,
+    next_nll: float,
     dest_correct: float,
     dest_nll: float,
     dest_entropy: float,
+    dest_conf: float,
+    dest_is_correct: float,
 ):
     bucket = store.setdefault(
         name,
         {
             "recon_correct_l1": 0.0,
             "recon_total": 0.0,
+            "next_correct": 0.0,
+            "next_total": 0.0,
+            "next_nll_sum": 0.0,
             "dest_correct": 0.0,
             "dest_nll_sum": 0.0,
             "dest_entropy_sum": 0.0,
+            "dest_conf": [],
+            "dest_is_correct": [],
             "samples": 0,
         },
     )
     bucket["recon_correct_l1"] += recon_correct
     bucket["recon_total"] += recon_total
+    bucket["next_correct"] += next_correct
+    bucket["next_total"] += next_total
+    bucket["next_nll_sum"] += next_nll
     bucket["dest_correct"] += dest_correct
     bucket["dest_nll_sum"] += dest_nll
     bucket["dest_entropy_sum"] += dest_entropy
+    bucket["dest_conf"].append(dest_conf)
+    bucket["dest_is_correct"].append(dest_is_correct)
     bucket["samples"] += 1
 
 
-def finalize_metrics(store: dict) -> Dict[str, dict]:
+def finalize_metrics(store: dict, ece_bins: int) -> Dict[str, dict]:
     out = {}
     for name, b in store.items():
         recon_acc = (
             b["recon_correct_l1"] / b["recon_total"] if b["recon_total"] > 0 else 0.0
         )
+        next_top1 = b["next_correct"] / b["next_total"] if b["next_total"] > 0 else 0.0
+        next_nll = b["next_nll_sum"] / b["samples"] if b["samples"] > 0 else 0.0
         dest_top1 = b["dest_correct"] / b["samples"] if b["samples"] > 0 else 0.0
         dest_nll = b["dest_nll_sum"] / b["samples"] if b["samples"] > 0 else 0.0
         dest_entropy = b["dest_entropy_sum"] / b["samples"] if b["samples"] > 0 else 0.0
+        conf = np.asarray(b["dest_conf"], dtype=np.float64)
+        corr = np.asarray(b["dest_is_correct"], dtype=np.float64)
+        dest_ece = expected_calibration_error(conf, corr, n_bins=ece_bins)
         out[name] = {
             "recon_acc_l1": recon_acc,
+            "next_step_top1": next_top1,
+            "next_step_nll": next_nll,
             "dest_top1": dest_top1,
             "dest_nll": dest_nll,
             "dest_entropy": dest_entropy,
+            "dest_ece": dest_ece,
             "samples": b["samples"],
             "mask_tokens": b["recon_total"],
+            "next_tokens": b["next_total"],
         }
     return out
 
 
-def main():
-    args = parse_args()
-    set_seed(args.seed)
+def _ci_from_values(
+    values: np.ndarray,
+    ci_method: str,
+    alpha: float,
+    bootstrap_iters: int,
+    rng_seed: int,
+) -> Dict[str, float]:
+    if values.size == 0:
+        return {"mean": 0.0, "std": 0.0, "ci_low": 0.0, "ci_high": 0.0, "n": 0}
+    mean = float(values.mean())
+    std = float(values.std(ddof=1)) if values.size > 1 else 0.0
+    if values.size == 1:
+        return {
+            "mean": mean,
+            "std": std,
+            "ci_low": mean,
+            "ci_high": mean,
+            "n": 1,
+        }
+    if ci_method == "bootstrap":
+        rng = np.random.default_rng(rng_seed)
+        sample_means = np.empty((bootstrap_iters,), dtype=np.float64)
+        for i in range(bootstrap_iters):
+            idx = rng.integers(0, values.size, size=values.size)
+            sample_means[i] = float(values[idx].mean())
+        lo = float(np.quantile(sample_means, alpha / 2.0))
+        hi = float(np.quantile(sample_means, 1.0 - alpha / 2.0))
+    else:
+        se = std / math.sqrt(float(values.size))
+        z = 1.959963984540054
+        lo = mean - z * se
+        hi = mean + z * se
+    return {
+        "mean": mean,
+        "std": std,
+        "ci_low": lo,
+        "ci_high": hi,
+        "n": int(values.size),
+    }
 
-    if not Path(args.local_data).exists():
-        raise FileNotFoundError(f"local_data not found: {args.local_data}")
 
-    pack = load_backbone(
-        args.checkpoint, device=args.device, override_max_len=args.max_len
-    )
-
-    records = load_local_data(args.local_data)
-    dataset = FixedTrajectoryDataset(
-        records, max_len=args.max_len, sample_limit=args.sample_limit
-    )
-    if len(dataset) < 10:
-        raise RuntimeError(f"not enough samples for length sensitivity: {len(dataset)}")
-
-    lengths = np.array([s["raw_length"] for s in dataset.samples], dtype=np.int64)
-    bins, strategy = parse_bins(args.length_bins, lengths)
-
+def evaluate_seed(args, pack, dataset, bins: np.ndarray, seed: int):
+    set_seed(seed)
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -310,17 +389,16 @@ def main():
         num_workers=args.num_workers,
         collate_fn=collate_fixed,
     )
-
     rng = torch.Generator(device=args.device)
-    rng.manual_seed(args.seed + 19)
-
+    rng.manual_seed(seed + 19)
     bucket_store: Dict[str, dict] = {}
+
     for batch in loader:
         attention = batch["attention_mask"].to(args.device)
+        raw_len = batch["raw_length"].detach().cpu().numpy()
         recon_mask = sample_mask(attention, args.mask_ratio, generator=rng)
 
-        # Prevent destination triviality by masking the last point(s)
-        # before computing dest logits.
+        # Prevent destination triviality by masking the last point(s) for dest metrics.
         dest_mask = torch.zeros_like(recon_mask)
         if args.dest_mask_last_k > 0:
             vlen = attention.sum(dim=1).long().clamp(min=1)
@@ -329,22 +407,50 @@ def main():
                 start = max(0, end - int(args.dest_mask_last_k))
                 if start < end:
                     dest_mask[i, start:end] = True
-
         recon_mask = recon_mask & ~dest_mask
         mask = recon_mask | dest_mask
-        outputs, _, t1, _, _ = forward_backbone(
+
+        outputs_masked, _, t1, _, _ = forward_backbone(
             batch, pack, device=args.device, max_len=args.max_len, mask=mask
         )
+        outputs_plain, _, t1_plain, _, _ = forward_backbone(
+            batch, pack, device=args.device, max_len=args.max_len, mask=None
+        )
 
-        p1 = outputs["step_logits"]["l1"].argmax(dim=-1)
-        correct = (p1 == t1.to(args.device)) & recon_mask
-        correct_per = correct.sum(dim=1).detach().cpu().numpy()
-        total_per = recon_mask.sum(dim=1).detach().cpu().numpy()
+        t1 = t1.to(args.device)
+        t1_plain = t1_plain.to(args.device)
 
-        dest_logits = outputs["dest_logits"]
+        # reconstruction metrics
+        p1 = outputs_masked["step_logits"]["l1"].argmax(dim=-1)
+        recon_correct = ((p1 == t1) & recon_mask).sum(dim=1).detach().cpu().numpy()
+        recon_total = recon_mask.sum(dim=1).detach().cpu().numpy()
+
+        # next-step micro metrics (token-level shift)
+        next_correct = np.zeros((attention.shape[0],), dtype=np.float32)
+        next_total = np.zeros((attention.shape[0],), dtype=np.float32)
+        next_nll = np.zeros((attention.shape[0],), dtype=np.float32)
+        logits_next_all = outputs_plain["step_logits"]["l1"]
+        for i in range(attention.shape[0]):
+            vlen = int(attention[i].sum().item())
+            if vlen <= 1:
+                continue
+            logits_i = logits_next_all[i, : vlen - 1]
+            targets_i = t1_plain[i, 1:vlen]
+            pred_i = logits_i.argmax(dim=-1)
+            corr = (pred_i == targets_i).float()
+            next_correct[i] = float(corr.sum().item())
+            next_total[i] = float(corr.shape[0])
+            next_nll[i] = float(
+                F.cross_entropy(logits_i.float(), targets_i, reduction="mean").item()
+            )
+
+        # destination metrics
+        dest_logits = outputs_masked["dest_logits"]
         last_idx = attention.sum(dim=1).long().clamp(min=1) - 1
-        dest_targets = t1.to(args.device).gather(1, last_idx.unsqueeze(1)).squeeze(1)
+        dest_targets = t1.gather(1, last_idx.unsqueeze(1)).squeeze(1)
         dest_pred = dest_logits.argmax(dim=-1)
+        probs = torch.softmax(dest_logits.float(), dim=-1)
+        dest_conf = probs.max(dim=-1).values.detach().cpu().numpy()
         dest_correct = (
             (dest_pred == dest_targets).detach().cpu().numpy().astype(np.float32)
         )
@@ -354,36 +460,123 @@ def main():
             .cpu()
             .numpy()
         )
-        probs = torch.softmax(dest_logits.float(), dim=-1)
         dest_entropy = (
             (-probs * torch.log(probs + 1e-9)).sum(dim=-1).detach().cpu().numpy()
         )
-
-        raw_len = batch["raw_length"].detach().cpu().numpy()
 
         for i in range(raw_len.shape[0]):
             bucket = bin_name_for_length(int(raw_len[i]), bins)
             update_bin_metrics(
                 bucket_store,
                 bucket,
-                float(correct_per[i]),
-                float(total_per[i]),
-                float(dest_correct[i]),
-                float(dest_nll[i]),
-                float(dest_entropy[i]),
+                recon_correct=float(recon_correct[i]),
+                recon_total=float(recon_total[i]),
+                next_correct=float(next_correct[i]),
+                next_total=float(next_total[i]),
+                next_nll=float(next_nll[i]),
+                dest_correct=float(dest_correct[i]),
+                dest_nll=float(dest_nll[i]),
+                dest_entropy=float(dest_entropy[i]),
+                dest_conf=float(dest_conf[i]),
+                dest_is_correct=float(dest_correct[i]),
             )
 
-    metrics = finalize_metrics(bucket_store)
+    metrics = finalize_metrics(bucket_store, ece_bins=args.ece_bins)
     gap = {}
     if "short" in metrics and "long" in metrics:
-        gap = {
-            "recon_acc_l1": metrics["long"]["recon_acc_l1"]
-            - metrics["short"]["recon_acc_l1"],
-            "dest_top1": metrics["long"]["dest_top1"] - metrics["short"]["dest_top1"],
-            "dest_nll": metrics["long"]["dest_nll"] - metrics["short"]["dest_nll"],
-            "dest_entropy": metrics["long"]["dest_entropy"]
-            - metrics["short"]["dest_entropy"],
-        }
+        for k in ("recon_acc_l1", "next_step_top1", "dest_top1", "dest_nll", "dest_ece"):
+            gap[k] = float(metrics["long"].get(k, 0.0) - metrics["short"].get(k, 0.0))
+    return metrics, gap
+
+
+def main():
+    args = parse_args()
+    set_seed(args.seed)
+    if not Path(args.local_data).exists():
+        raise FileNotFoundError(f"local_data not found: {args.local_data}")
+
+    pack = load_backbone(
+        args.checkpoint, device=args.device, override_max_len=args.max_len
+    )
+    records = load_local_data(args.local_data)
+    dataset = FixedTrajectoryDataset(
+        records, max_len=args.max_len, sample_limit=args.sample_limit
+    )
+    if len(dataset) < 10:
+        raise RuntimeError(f"not enough samples for length sensitivity: {len(dataset)}")
+    lengths = np.array([s["raw_length"] for s in dataset.samples], dtype=np.int64)
+    bins, strategy = parse_bins(args.length_bins, lengths)
+
+    if args.seeds.strip():
+        seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
+    else:
+        seeds = [args.seed + i for i in range(max(1, args.num_seeds))]
+
+    per_seed_metrics = []
+    per_seed_gap = []
+    for seed in seeds:
+        metrics_seed, gap_seed = evaluate_seed(args, pack, dataset, bins, seed=seed)
+        per_seed_metrics.append(metrics_seed)
+        per_seed_gap.append(gap_seed)
+
+    metrics_ci = aggregate_length_metrics(
+        per_seed_metrics,
+        ci_method=args.ci_method,
+        alpha=args.alpha,
+        bootstrap_iters=args.bootstrap_iters,
+        rng_seed=args.seed + 999,
+    )
+    metrics_mean = {
+        b: {m: float(v["mean"]) for m, v in metrics_ci[b].items()} for b in metrics_ci
+    }
+
+    gap_metrics = sorted({k for g in per_seed_gap for k in g.keys()})
+    gap_mean = {}
+    gap_stats = {}
+    for metric in gap_metrics:
+        vals = np.asarray(
+            [float(g[metric]) for g in per_seed_gap if metric in g], dtype=np.float64
+        )
+        ci = _ci_from_values(
+            vals,
+            ci_method=args.ci_method,
+            alpha=args.alpha,
+            bootstrap_iters=args.bootstrap_iters,
+            rng_seed=args.seed + 171,
+        )
+        short_vals = np.asarray(
+            [
+                float(m.get("short", {}).get(metric, 0.0))
+                for m in per_seed_metrics
+                if "short" in m and metric in m["short"]
+            ],
+            dtype=np.float64,
+        )
+        long_vals = np.asarray(
+            [
+                float(m.get("long", {}).get(metric, 0.0))
+                for m in per_seed_metrics
+                if "long" in m and metric in m["long"]
+            ],
+            dtype=np.float64,
+        )
+        decision = gap_decision_from_seed_values(
+            short_vals,
+            long_vals,
+            variability_k=args.variability_k,
+            tolerance=args.gap_tolerance,
+        )
+        gap_mean[metric] = float(ci["mean"])
+        gap_stats[metric] = {**ci, **decision}
+
+    primary = args.primary_gap_metric
+    primary_pass = bool(gap_stats.get(primary, {}).get("pass", True))
+    overall_pass = bool(
+        gap_stats.get("recon_acc_l1", {}).get("pass", True)
+        and gap_stats.get("next_step_top1", {}).get("pass", True)
+        and gap_stats.get("dest_top1", {}).get("pass", True)
+        and primary_pass
+    )
 
     out = {
         "checkpoint": args.checkpoint,
@@ -393,10 +586,24 @@ def main():
         "mask_ratio": args.mask_ratio,
         "dest_mask_last_k": args.dest_mask_last_k,
         "seed": args.seed,
+        "seeds": seeds,
         "bins": bins.tolist(),
         "bin_strategy": strategy,
-        "metrics": metrics,
-        "length_sensitivity_gap": gap,
+        "metrics": metrics_mean,
+        "metrics_ci": metrics_ci,
+        "length_sensitivity_gap": gap_mean,
+        "length_sensitivity_gap_stats": gap_stats,
+        "decision": {
+            "overall_pass": overall_pass,
+            "primary_gap_metric": primary,
+            "primary_pass": primary_pass,
+            "variability_k": args.variability_k,
+            "gap_tolerance": args.gap_tolerance,
+        },
+        "per_seed": [
+            {"seed": seed, "metrics": m, "gap": g}
+            for seed, m, g in zip(seeds, per_seed_metrics, per_seed_gap)
+        ],
     }
 
     out_path = Path(args.output)
