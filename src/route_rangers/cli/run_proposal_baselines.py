@@ -111,15 +111,14 @@ def evaluate_mean_displacement(
         bucket = bin_name_for_length(raw_len, bins)
 
         # next-step baseline from running mean displacement
+        # skip the first step where we have no motion history, so we only
+        # evaluate on t>=2 where a mean displacement estimate is available.
         pred_steps = []
         true_steps = []
-        for t in range(1, vlen):
+        for t in range(2, vlen):
             obs = coords[:t, :2]
-            if obs.shape[0] >= 2:
-                delta = obs[1:] - obs[:-1]
-                mean_delta = delta.mean(axis=0)
-            else:
-                mean_delta = np.zeros((2,), dtype=np.float32)
+            delta = obs[1:] - obs[:-1]
+            mean_delta = delta.mean(axis=0)
             pred = obs[-1] + mean_delta
             pred_steps.append(pred[None, :])
             true_steps.append(coords[t : t + 1, :2])
