@@ -27,7 +27,7 @@ if [[ -z "${CKPT_PATH}" ]]; then
     exit 1
 fi
 
-POI_DATA="${POI_DATA:-${ROOT_DIR}/data/poi_mobility_sample.pkl}"
+POI_DATA="${POI_DATA:-${ROOT_DIR}/data/samples/poi_mobility_sample.pkl}"
 JOB_ID="${SLURM_JOB_ID:-local}"
 
 echo "=== Mobility Foundation Eval ==="

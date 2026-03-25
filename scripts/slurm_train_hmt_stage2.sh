@@ -37,8 +37,8 @@ export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-${HF_HOME}/hub}"
 export HF_HUB_CACHE="${HF_HUB_CACHE:-${HUGGINGFACE_HUB_CACHE}}"
 
 DEFAULT_WORLDTRACE_LOCAL_PATH=""
-if [[ -f "${ROOT_DIR}/data/worldtrace_full/Trajectory.zip" ]]; then
-  DEFAULT_WORLDTRACE_LOCAL_PATH="${ROOT_DIR}/data/worldtrace_full/Trajectory.zip"
+if [[ -f "${ROOT_DIR}/data/raw/worldtrace/Trajectory.zip" ]]; then
+  DEFAULT_WORLDTRACE_LOCAL_PATH="${ROOT_DIR}/data/raw/worldtrace/Trajectory.zip"
 fi
 WORLDTRACE_LOCAL_PATH="${WORLDTRACE_LOCAL_PATH:-${DEFAULT_WORLDTRACE_LOCAL_PATH}}"
 HF_NAME="${HF_NAME:-OpenTrace/WorldTrace}"
@@ -62,7 +62,7 @@ if [[ "${RESUME_OPTIMIZER:-0}" == "1" ]]; then
   RESUME_OPT_ARGS=(--resume_optimizer)
 fi
 
-MACRO_DATA="${MACRO_DATA:-${ROOT_DIR}/data/hdx/movement-distribution/processed/movement_distribution_12m_monthly.npz}"
+MACRO_DATA="${MACRO_DATA:-${ROOT_DIR}/data/processed/macro/movement_distribution_12m_monthly.npz}"
 if [[ ! -f "${MACRO_DATA}" ]]; then
   echo "ERROR: macro_data not found: ${MACRO_DATA}" >&2
   exit 1
@@ -98,7 +98,7 @@ python train_hmt.py \
   --graph_temporal_window "${GRAPH_TEMPORAL_WINDOW:-2}" \
   --tokenizer h3 \
   --no_hash_tokens \
-  --h3_vocab "${H3_VOCAB:-${ROOT_DIR}/data/h3_vocab_worldtrace_full.json}" \
+  --h3_vocab "${H3_VOCAB:-${ROOT_DIR}/data/processed/tokenizers/h3_vocab_worldtrace_full.json}" \
   --ckpt_prefix "${CKPT_PREFIX:-hmt_stage2}" \
   --resume "${RESUME}" \
   "${RESUME_OPT_ARGS[@]}" \

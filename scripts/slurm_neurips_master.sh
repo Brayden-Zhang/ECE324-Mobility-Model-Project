@@ -102,7 +102,7 @@ EVAL_CKPT="${LATEST_CKPT:-${ROOT_DIR}/checkpoints/hmt_nohash_full_step_25000.pt}
 # 3a. Core benchmarks (reconstruction, probes)
 BENCH_JID=$(submit "Core benchmarks" \
     scripts/slurm_eval_full.sh \
-    --export=ALL,CKPT_PATH="${EVAL_CKPT}",SPLIT_MODE=both,TRANSFER_DATASETS="${ROOT_DIR}/data/worldtrace_sample.pkl ${ROOT_DIR}/data/worldtrace_sample_nyc.pkl")
+    --export=ALL,CKPT_PATH="${EVAL_CKPT}",SPLIT_MODE=both,TRANSFER_DATASETS="${ROOT_DIR}/data/samples/worldtrace_sample.pkl ${ROOT_DIR}/data/samples/worldtrace_sample_nyc.pkl")
 
 # 3b. UniTraj eval with regression (fair comparison)
 UNITRAJ_REG_JID=$(submit "UniTraj eval (regression)" \

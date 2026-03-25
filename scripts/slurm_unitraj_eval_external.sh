@@ -32,7 +32,7 @@ fi
 
 export PYTHONUNBUFFERED=1
 
-DATA_PATH="${DATA_PATH:-${ROOT_DIR}/data/worldtrace_sample.pkl}"
+DATA_PATH="${DATA_PATH:-${ROOT_DIR}/data/samples/worldtrace_sample.pkl}"
 DEFAULT_UNITRAJ_CKPT="${ROOT_DIR}/checkpoints/unitraj.pt"
 if [[ ! -f "${DEFAULT_UNITRAJ_CKPT}" ]]; then
   DEFAULT_UNITRAJ_CKPT="${ROOT_DIR}/checkpoints/unitraj/best_model.pt"

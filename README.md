@@ -64,14 +64,14 @@ The paper-facing figure generator is implemented in `src/route_rangers/visualiza
 
 Small reproducible assets kept in the repo:
 
-- `data/worldtrace_sample.pkl`
-- `data/worldtrace_sample_nyc.pkl`
-- `data/poi_mobility_sample.pkl`
-- `data/osm_context.json`
+- `data/samples/worldtrace_sample.pkl`
+- `data/samples/worldtrace_sample_nyc.pkl`
+- `data/samples/poi_mobility_sample.pkl`
+- `data/processed/context/osm_context.json`
 
 Optional large local assets are intentionally not tracked, for example:
 
-- `data/worldtrace_full/Trajectory.zip`
+- `data/raw/worldtrace/Trajectory.zip`
 - HDX movement-distribution files under `data/hdx/`
 - local checkpoints under `checkpoints/`
 
@@ -91,7 +91,7 @@ Quick local run:
 ```bash
 python train_hmt.py \
   --data_mode local \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --max_len 200 \
   --batch_size 32 \
   --max_steps 1000 \
@@ -105,7 +105,7 @@ Full local run from a WorldTrace zip:
 ```bash
 python train_hmt.py \
   --data_mode hf_zip \
-  --worldtrace_local_path data/worldtrace_full/Trajectory.zip \
+  --worldtrace_local_path data/raw/worldtrace/Trajectory.zip \
   --worldtrace_file Trajectory.zip \
   --batch_size 64 \
   --max_len 200 \
@@ -123,7 +123,7 @@ Core examples:
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_benchmarks \
   --checkpoint checkpoints/<your_hmt_checkpoint>.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --split_mode both \
   --output cache/benchmark_results.json
 ```
@@ -131,14 +131,14 @@ PYTHONPATH=src python -m route_rangers.cli.run_benchmarks \
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_length_sensitivity \
   --checkpoint checkpoints/<your_hmt_checkpoint>.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --output cache/length_sensitivity_latest.json
 ```
 
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint checkpoints/<your_hmt_checkpoint>.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --task both \
   --split_mode all \
   --output cache/unitraj_eval_regression.json

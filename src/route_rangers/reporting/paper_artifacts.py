@@ -12,10 +12,12 @@ from typing import Any
 from route_rangers.config import PROJECT_ROOT
 
 
-DEFAULT_REPORT_JSON = PROJECT_ROOT / "reports" / "foundation_downstream_report.json"
+DEFAULT_REPORT_JSON = (
+    PROJECT_ROOT / "reports" / "foundation" / "foundation_downstream_report.json"
+)
 DEFAULT_FOUNDATION_DOC = PROJECT_ROOT / "docs" / "foundation_evals.md"
 DEFAULT_UNITRAJ_CSV = (
-    PROJECT_ROOT / "reports" / "unitraj_hmt_external_comparison_20260324.csv"
+    PROJECT_ROOT / "reports" / "baselines" / "unitraj_hmt_external_comparison_20260324.csv"
 )
 COMPUTE_SCRIPT_SPECS = (
     ("HMT full pretraining", PROJECT_ROOT / "scripts" / "slurm_train_hmt_nohash_full.sh"),

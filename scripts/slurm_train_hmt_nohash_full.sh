@@ -37,12 +37,12 @@ export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-${HF_HOME}/hub}"
 export HF_HUB_CACHE="${HF_HUB_CACHE:-${HUGGINGFACE_HUB_CACHE}}"
 
 DEFAULT_WORLDTRACE_LOCAL_PATH=""
-if [[ -f "${ROOT_DIR}/data/worldtrace_full/Trajectory.zip" ]]; then
-  DEFAULT_WORLDTRACE_LOCAL_PATH="${ROOT_DIR}/data/worldtrace_full/Trajectory.zip"
+if [[ -f "${ROOT_DIR}/data/raw/worldtrace/Trajectory.zip" ]]; then
+  DEFAULT_WORLDTRACE_LOCAL_PATH="${ROOT_DIR}/data/raw/worldtrace/Trajectory.zip"
 fi
 WORLDTRACE_LOCAL_PATH="${WORLDTRACE_LOCAL_PATH:-${DEFAULT_WORLDTRACE_LOCAL_PATH}}"
 
-H3_VOCAB="${H3_VOCAB:-${ROOT_DIR}/data/h3_vocab_worldtrace_full.json}"
+H3_VOCAB="${H3_VOCAB:-${ROOT_DIR}/data/processed/tokenizers/h3_vocab_worldtrace_full.json}"
 
 VOCAB_L0="${VOCAB_L0:-16384}"
 VOCAB_L1="${VOCAB_L1:-4096}"

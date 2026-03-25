@@ -27,9 +27,9 @@ PYTHONPATH=src python -m route_rangers.cli.generate_foundation_report \
 ```
 
 Outputs:
-- `reports/foundation_downstream_report.md`
-- `reports/foundation_downstream_report.csv`
-- `reports/foundation_downstream_report.json`
+- `reports/foundation/foundation_downstream_report.md`
+- `reports/foundation/foundation_downstream_report.csv`
+- `reports/foundation/foundation_downstream_report.json`
 
 ## UniTraj-style recovery and prediction
 
@@ -38,7 +38,7 @@ Trajectory recovery masks random points; trajectory prediction masks the last `K
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint checkpoints/hmt_step_15000.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --split_mode both \
   --task both \
   --output cache/unitraj_eval_step15000.json
@@ -56,7 +56,7 @@ Run the same evaluation on multiple datasets without fine-tuning.
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_transfer_suite \
   --checkpoint checkpoints/hmt_step_15000.pt \
-  --datasets data/worldtrace_sample.pkl data/other_dataset.pkl \
+  --datasets data/samples/worldtrace_sample.pkl data/other_dataset.pkl \
   --output cache/unitraj_transfer_suite.json
 ```
 
@@ -67,7 +67,7 @@ Build centroid mappings from a fraction of the training split to simulate data e
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_data_efficiency \
   --checkpoint checkpoints/hmt_step_15000.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --fractions 0.05 0.1 0.2 0.5 1.0 \
   --output cache/unitraj_data_efficiency.json
 ```
@@ -79,7 +79,7 @@ Use input noise and additional dropouts to evaluate robustness.
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --checkpoint checkpoints/hmt_step_15000.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --coord_noise_std_m 30 \
   --input_drop_ratio 0.2 \
   --output cache/unitraj_eval_robust.json
@@ -92,7 +92,7 @@ Evaluate how metrics differ across short/medium/long trajectory-length buckets. 
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_length_sensitivity \
   --checkpoint checkpoints/hmt_ablate_lenweight_step_15000.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --max_len 200 \
   --sample_limit 2000 \
   --dest_mask_last_k 1 \
@@ -103,7 +103,7 @@ CPU smoke run (faster, lower-fidelity):
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_length_sensitivity \
   --checkpoint checkpoints/hmt_ablate_lenweight_step_15000.pt \
-  --local_data data/worldtrace_sample.pkl \
+  --local_data data/samples/worldtrace_sample.pkl \
   --max_len 64 \
   --sample_limit 100 \
   --dest_mask_last_k 1 \
@@ -117,7 +117,7 @@ Evaluate the macro head on monthly distance-category distributions.
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_macro_eval \
   --checkpoint checkpoints/hmt_stage2_final_step_100000.pt \
-  --macro_data data/hdx/movement-distribution/processed/movement_distribution_12m_monthly.npz \
+  --macro_data data/processed/macro/movement_distribution_12m_monthly.npz \
   --output cache/macro_eval.json
 ```
 
@@ -128,8 +128,8 @@ Predict the destination commuting zone from pooled step embeddings.
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_commuting_zone_probe \
   --checkpoint checkpoints/hmt_stage2_final_step_100000.pt \
-  --local_data data/worldtrace_sample.pkl \
-  --cz_csv data/hdx/commuting-zones/data-for-good-at-meta-commuting-zones-march-2023.csv \
+  --local_data data/samples/worldtrace_sample.pkl \
+  --cz_csv data/raw/hdx/commuting-zones/data-for-good-at-meta-commuting-zones-march-2023.csv \
   --output cache/commuting_zone_probe.json
 ```
 
@@ -140,7 +140,7 @@ Evaluate next-POI ranking metrics (Acc@1/5/10, Recall@K, NDCG@10, MRR), plus opt
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_next_poi_eval \
   --checkpoint checkpoints/hmt_step_15000.pt \
-  --local_data data/poi_mobility_sample.pkl \
+  --local_data data/samples/poi_mobility_sample.pkl \
   --max_len 200 \
   --split_mode temporal \
   --output cache/next_poi_eval.json
@@ -153,7 +153,7 @@ Run zero-shot transfer across cities by holding out one city at a time.
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_cross_city_transfer \
   --checkpoint checkpoints/hmt_step_15000.pt \
-  --local_data data/poi_mobility_sample.pkl \
+  --local_data data/samples/poi_mobility_sample.pkl \
   --min_city_records 100 \
   --output cache/cross_city_transfer.json
 ```
@@ -175,7 +175,7 @@ The repository bundles a UniTraj-compatible baseline implementation under
 
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.run_unitraj_external_eval \
-  --data_path data/worldtrace_sample.pkl \
+  --data_path data/samples/worldtrace_sample.pkl \
   --checkpoint checkpoints/unitraj.pt \
   --task both
 ```
@@ -184,13 +184,13 @@ If you need a simpler interchange format, export WorldTrace into a CSV and adapt
 
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.unitraj.export_worldtrace_csv \
-  --input data/worldtrace_sample.pkl \
+  --input data/samples/worldtrace_sample.pkl \
   --output data/worldtrace_sample.csv
 ```
 
 
 ## Latest Results
-Evaluation dataset note (latest UniTraj-style runs): `data/worldtrace_sample.pkl` (2,000 trajectories, `split_mode=all`, `max_len=200`, `mask_ratio=0.5`, `pred_steps=5`).
+Evaluation dataset note (latest UniTraj-style runs): `data/samples/worldtrace_sample.pkl` (2,000 trajectories, `split_mode=all`, `max_len=200`, `mask_ratio=0.5`, `pred_steps=5`).
 <!-- RESULTS:BEGIN -->
 ### Benchmarks (random split, test)
 

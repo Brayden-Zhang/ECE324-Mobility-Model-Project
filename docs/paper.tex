@@ -364,7 +364,7 @@ We emphasize destination prediction capabilities using Dest-Local@Top1, which me
 \label{fig:results_length_lsg}
 \end{figure}
 
-\input{../reports/paper_length_table.tex}
+\input{../reports/paper/paper_length_table.tex}
 
 \begin{equation}
 \mathrm{LSG}_{\text{Dest-Local@Top1}}=-0.1367.
@@ -379,7 +379,7 @@ The checked-in LengthRobustBench artifact shows a clear long-horizon degradation
 \label{fig:results_robustness_suite}
 \end{figure*}
 
-\input{../reports/paper_robustness_table.tex}
+\input{../reports/paper/paper_robustness_table.tex}
 
 The robustness picture is mixed rather than uniformly solved. Prefix performance improves steadily with more observed context, moderate time shifts have little effect at the tested offsets, and change detection is strong (AUC 0.957). However, reverse-order stress still causes a substantial drop in top-1 accuracy and a large increase in NLL, showing that temporal order remains a meaningful failure mode.
 
@@ -393,7 +393,7 @@ We directly compare TrajectoryFM-HMT against the UniTraj reference baseline on b
 \label{fig:results_meter_scale}
 \end{figure}
 
-\input{../reports/paper_unitraj_main.tex}
+\input{../reports/paper/paper_unitraj_main.tex}
 
 For trajectory recovery, HMT reduces MAE from 17.16m to 5.37m. For next-step prediction, MAE drops from 77.92m to 15.85m. These are strong empirical gains, although they should still be interpreted under the shared-wrapper caveat below rather than as a final matched-budget leaderboard result.
 
@@ -401,7 +401,7 @@ For trajectory recovery, HMT reduces MAE from 17.16m to 5.37m. For next-step pre
 
 \subsection{Macro head snapshot}
 
-\input{../reports/paper_macro_table.tex}
+\input{../reports/paper/paper_macro_table.tex}
 
 Requested scheduler budgets for the main training and evaluation entrypoints are reported in Appendix Table~\ref{tab:compute_resources}.
 
@@ -457,10 +457,10 @@ UniTraj reference code/checkpoint & \url{https://github.com/vita-epfl/UniTraj} &
 \subsection{Moved Main-Text Tables}
 Clean UniTraj-style meter-scale comparisons are moved to Appendix Table~\ref{tab:unitraj_clean}.
 
-\input{../reports/paper_unitraj_clean.tex}
+\input{../reports/paper/paper_unitraj_clean.tex}
 
 \subsection{Compute resource budgets}
-\input{../reports/paper_compute_table.tex}
+\input{../reports/paper/paper_compute_table.tex}
 
 \subsection{Checkpoint release artifact}
 To keep repository history lightweight and avoid Git LFS quota coupling, the primary evaluation checkpoint is distributed as a GitHub Release asset:

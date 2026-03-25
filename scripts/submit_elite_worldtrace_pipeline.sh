@@ -71,15 +71,15 @@ build_export() {
 }
 
 DEFAULT_WORLDTRACE_LOCAL_PATH=""
-if [[ -f "${ROOT_DIR}/data/worldtrace_full/Trajectory.zip" ]]; then
-  DEFAULT_WORLDTRACE_LOCAL_PATH="${ROOT_DIR}/data/worldtrace_full/Trajectory.zip"
+if [[ -f "${ROOT_DIR}/data/raw/worldtrace/Trajectory.zip" ]]; then
+  DEFAULT_WORLDTRACE_LOCAL_PATH="${ROOT_DIR}/data/raw/worldtrace/Trajectory.zip"
 fi
 
 WORLDTRACE_LOCAL_PATH="${WORLDTRACE_LOCAL_PATH:-${DEFAULT_WORLDTRACE_LOCAL_PATH}}"
-H3_VOCAB_DEFAULT="${ROOT_DIR}/data/h3_vocab_worldtrace_full.json"
-MACRO_DATA="${MACRO_DATA:-${ROOT_DIR}/data/hdx/movement-distribution/processed/movement_distribution_12m_monthly.npz}"
-LOCAL_DATA="${LOCAL_DATA:-${ROOT_DIR}/data/worldtrace_sample.pkl}"
-POI_DATA="${POI_DATA:-${ROOT_DIR}/data/poi_mobility_sample.pkl}"
+H3_VOCAB_DEFAULT="${ROOT_DIR}/data/processed/tokenizers/h3_vocab_worldtrace_full.json"
+MACRO_DATA="${MACRO_DATA:-${ROOT_DIR}/data/processed/macro/movement_distribution_12m_monthly.npz}"
+LOCAL_DATA="${LOCAL_DATA:-${ROOT_DIR}/data/samples/worldtrace_sample.pkl}"
+POI_DATA="${POI_DATA:-${ROOT_DIR}/data/samples/poi_mobility_sample.pkl}"
 UNITRAJ_CKPT="${UNITRAJ_CKPT:-${ROOT_DIR}/checkpoints/unitraj.pt}"
 
 BASE_CKPT="${BASE_CKPT:-$(ls -1t "${ROOT_DIR}"/checkpoints/hmt_nohash_full*_final_step_*.pt "${ROOT_DIR}"/checkpoints/hmt_nohash_full*_step_*.pt 2>/dev/null | head -n1 || true)}"

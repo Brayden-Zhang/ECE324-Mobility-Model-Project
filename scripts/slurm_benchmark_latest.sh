@@ -46,7 +46,7 @@ if [[ -z "${CKPT_PATH}" ]]; then
   exit 1
 fi
 
-LOCAL_DATA="${LOCAL_DATA:-${ROOT_DIR}/data/worldtrace_sample.pkl}"
+LOCAL_DATA="${LOCAL_DATA:-${ROOT_DIR}/data/samples/worldtrace_sample.pkl}"
 OUTPUT="${OUTPUT:-${ROOT_DIR}/cache/benchmark_${SLURM_JOB_ID}.json}"
 OUTPUT="${OUTPUT//%j/${SLURM_JOB_ID}}"
 DISABLE_GRAPH_ARGS=()

@@ -25,9 +25,11 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Build POI mobility sample from trajectory records"
     )
-    parser.add_argument("--input", type=str, default="data/worldtrace_sample.pkl")
-    parser.add_argument("--output", type=str, default="data/poi_mobility_sample.pkl")
-    parser.add_argument("--osm_context", type=str, default="data/osm_context.json")
+    parser.add_argument("--input", type=str, default="data/samples/worldtrace_sample.pkl")
+    parser.add_argument("--output", type=str, default="data/samples/poi_mobility_sample.pkl")
+    parser.add_argument(
+        "--osm_context", type=str, default="data/processed/context/osm_context.json"
+    )
     parser.add_argument("--poi_res", type=int, default=9)
     parser.add_argument("--user_res", type=int, default=4)
     parser.add_argument("--city_res_candidates", type=str, default="4,3,2,1,0")

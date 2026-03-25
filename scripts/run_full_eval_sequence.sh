@@ -8,7 +8,7 @@ VENV_PYTHON="${VENV_PYTHON:-.venv/bin/python}"
 PYTHONPATH_VALUE="${PYTHONPATH_VALUE:-src}"
 
 CHECKPOINT="${CHECKPOINT:-checkpoints/hmt_nohash_full_step_10000.pt}"
-LOCAL_DATA="${LOCAL_DATA:-data/worldtrace_sample.pkl}"
+LOCAL_DATA="${LOCAL_DATA:-data/samples/worldtrace_sample.pkl}"
 SAMPLE_LIMIT="${SAMPLE_LIMIT:-2000}"
 
 STAMP="$(date +%Y%m%d_%H%M%S)"

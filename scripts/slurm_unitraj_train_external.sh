@@ -33,7 +33,7 @@ fi
 
 export PYTHONUNBUFFERED=1
 
-DATA_PATH="${DATA_PATH:-${ROOT_DIR}/data/worldtrace_sample.pkl}"
+DATA_PATH="${DATA_PATH:-${ROOT_DIR}/data/samples/worldtrace_sample.pkl}"
 OUTPUT_DIR="${OUTPUT_DIR:-${ROOT_DIR}/checkpoints/unitraj}"
 
 PYTHONPATH=src python -m route_rangers.cli.unitraj.train_unitraj \

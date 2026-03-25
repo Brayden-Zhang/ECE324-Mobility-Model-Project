@@ -44,7 +44,7 @@ def main(config, logger):
     model = model.to(device)
 
     # file_path = "../data/worldtrace_train.pkl"
-    file_path = './data/worldtrace_sample.pkl'
+    file_path = './data/samples/worldtrace_sample.pkl'
     normalize_transform = Normalize()
     dataset = TrajectoryDataset(
         data_path=file_path, max_len=200, transform=normalize_transform
@@ -52,7 +52,7 @@ def main(config, logger):
     dataloader = DataLoader(
         dataset, batch_size=config.training.batch_size, shuffle=True, num_workers=32, pin_memory=True)
 
-    val_file_path = './data/worldtrace_sample.pkl'
+    val_file_path = './data/samples/worldtrace_sample.pkl'
     dataset_val = TrajectoryDataset(
         data_path= val_file_path,
         max_len=200,

@@ -12,15 +12,15 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Generate LaTeX tables and JSON metrics for the paper."
     )
-    parser.add_argument("--output_dir", type=str, default="reports")
+    parser.add_argument("--output_dir", type=str, default="reports/paper")
     parser.add_argument(
-        "--report_json", type=str, default="reports/foundation_downstream_report.json"
+        "--report_json", type=str, default="reports/foundation/foundation_downstream_report.json"
     )
     parser.add_argument("--foundation_doc", type=str, default="docs/foundation_evals.md")
     parser.add_argument(
         "--unitraj_csv",
         type=str,
-        default="reports/unitraj_hmt_external_comparison_20260324.csv",
+        default="reports/baselines/unitraj_hmt_external_comparison_20260324.csv",
     )
     return parser.parse_args()
 
