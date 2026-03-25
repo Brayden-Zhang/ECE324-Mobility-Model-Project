@@ -167,3 +167,8 @@ When publishing a checkpoint for reproducibility:
 3. Reference the resulting release asset URL in PR notes or in this README for traceability.
 
 This avoids Git LFS quota bottlenecks while keeping code history clean and mergeable.
+
+Current checkpoint release:
+
+- Release page: `https://github.com/Brayden-Zhang/ECE324-Mobility-Model-Project/releases/tag/v1.0-checkpoint`
+- Direct checkpoint asset: `https://github.com/Brayden-Zhang/ECE324-Mobility-Model-Project/releases/download/v1.0-checkpoint/hmt_worldtrace_stage1_step_25000.pt`
