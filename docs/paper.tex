@@ -44,7 +44,7 @@
 \maketitle
 
 \begin{abstract}
-Trajectory foundation models learn general-purpose mobility representations from large GPS corpora, but they are usually trained with token-level objectives that implicitly overweight longer trajectories. This can hide systematic performance disparities across sequence length. We present a rigorous study of \textbf{TrajectoryFM-HMT}, a hierarchical mobility transformer with multi-resolution \textbf{H3} tokens, flow matching, destination uncertainty modeling, and multi-scale consistency objectives. We introduce three key contributions: (i) \textbf{Length-Balanced Token Loss} (LBTL), (ii) \textbf{Length Sensitivity Gap} (LSG), and (iii) \textbf{LengthRobustBench}, a consolidated robustness protocol. On WorldTrace-derived evaluations, we observe negative LSG for both reconstruction and destination tasks, strong clean performance against an external UniTraj baseline under a shared wrapper, and clear robustness degradation under severe perturbations, and we propose concrete scaling directions.
+Trajectory foundation models learn general-purpose mobility representations from large GPS corpora, but they are usually trained with token-level objectives that implicitly overweight longer trajectories. This can hide systematic performance disparities across sequence length. We present a study of \textbf{TrajectoryFM-HMT}, a hierarchical mobility transformer with multi-resolution \textbf{H3} tokens, flow matching, destination uncertainty modeling, and multi-scale consistency objectives. We introduce three contributions: (i) \textbf{Length-Balanced Token Loss} (LBTL), (ii) \textbf{Length Sensitivity Gap} (LSG), and (iii) \textbf{LengthRobustBench}, a consolidated robustness protocol. On WorldTrace-derived evaluations, we observe negative LSG for destination accuracy (Dest-Local@Top1), strong clean performance against an external UniTraj baseline under a shared wrapper, and robustness degradation under temporal-order and endpoint perturbations.
 \end{abstract}
 
 \section{Introduction}
@@ -369,7 +369,7 @@ We emphasize destination prediction capabilities using Dest-Local@Top1, which me
 \begin{equation}
 \mathrm{LSG}_{\text{Dest-Local@Top1}}=-0.1367.
 \end{equation}
-The checked-in LengthRobustBench artifact shows a clear long-horizon degradation rather than a near-zero gap: short-bucket destination accuracy is approximately 0.776, while long-bucket accuracy falls to 0.640. We therefore interpret the current evidence as confirming measurable length sensitivity, even for a strong checkpoint.
+The checked-in LengthRobustBench artifact shows long-horizon degradation rather than a near-zero gap: short-bucket Dest-Local@Top1 is $0.776$, while long-bucket accuracy falls to $0.640$. This yields a negative LSG (long - short) of $-0.137$, indicating measurable length sensitivity.
 
 \subsection{Invariance, order sensitivity, and embedding consistency}
 \begin{figure*}[t]
@@ -463,10 +463,14 @@ Clean UniTraj-style meter-scale comparisons are moved to Appendix Table~\ref{tab
 \input{../reports/paper/paper_compute_table.tex}
 
 \subsection{Checkpoint release artifact}
-To keep repository history lightweight and avoid Git LFS quota coupling, the primary evaluation checkpoint is distributed as a GitHub Release asset:
-\url{https://github.com/Brayden-Zhang/ECE324-Mobility-Model-Project/releases/tag/v1.0-checkpoint}.
+To keep repository history lightweight and avoid Git LFS quota coupling, we distribute the primary evaluation checkpoint as a GitHub Release asset:
+\begin{flushleft}
+\footnotesize\nolinkurl{https://github.com/Brayden-Zhang/ECE324-Mobility-Model-Project/releases/tag/v1.0-checkpoint}.
+\end{flushleft}
 The direct download URL used by the evaluation scripts is:
-\url{https://github.com/Brayden-Zhang/ECE324-Mobility-Model-Project/releases/download/v1.0-checkpoint/hmt_worldtrace_stage1_step_25000.pt}.
+\begin{flushleft}
+\footnotesize\nolinkurl{https://github.com/Brayden-Zhang/ECE324-Mobility-Model-Project/releases/download/v1.0-checkpoint/hmt_worldtrace_stage1_step_25000.pt}.
+\end{flushleft}
 
 \section{Scope Change Statement}
 No scope change is declared relative to the current project direction. If scope changes are made later, this section will describe what changed and why.
