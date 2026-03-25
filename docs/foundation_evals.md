@@ -2,6 +2,11 @@
 
 This document collects the evaluation scripts that align with UniTraj-style metrics and deeper foundation-model evidence.
 
+Evaluation artifact index:
+
+- Data asset organization: `data/DATA_CATALOG.md`
+- Report/output organization: `reports/EVAL_CATALOG.md`
+
 ## Update Results Blocks
 
 After running any eval that writes JSON to `cache/`, refresh the summary tables:

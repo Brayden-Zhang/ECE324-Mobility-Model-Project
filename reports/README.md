@@ -8,3 +8,11 @@ This directory stores lightweight checked-in result summaries that support the p
 - `unitraj_hmt_external_comparison_20260324.csv`: meter-scale comparison snapshot.
 
 Heavy intermediate caches belong in `cache/` and are intentionally not tracked.
+
+## Evaluation organization
+
+Use `reports/EVAL_CATALOG.md` as the canonical index for:
+
+- all current evaluation artifacts,
+- which metrics each artifact stores,
+- where each paper table/figure draws its values from.

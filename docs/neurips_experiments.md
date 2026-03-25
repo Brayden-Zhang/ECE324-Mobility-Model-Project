@@ -75,16 +75,17 @@ PYTHONPATH=src python -m route_rangers.cli.collect_results
 ## Scripted Runs (SLURM)
 1. Stage-1 training: `scripts/slurm_train_hmt_nohash_full.sh`
 2. Stage-2 training: `scripts/slurm_train_hmt_stage2.sh`
-3. Full eval: `scripts/slurm_eval_full.sh`
+3. Full eval: `scripts/slurm_benchmark_latest.sh`
 4. External UniTraj eval: `scripts/slurm_unitraj_eval_external.sh`
-5. Length sensitivity: `scripts/slurm_length_sensitivity.sh`
-6. Invariance suite: `scripts/slurm_invariance_suite.sh`
-7. Embedding retrieval: `scripts/slurm_embedding_retrieval.sh`
-8. Reverse-order stress: `scripts/slurm_reverse_order.sh`
-9. Change detection: `scripts/slurm_change_detection.sh`
+5. NeurIPS consolidated suite: `scripts/slurm_neurips_master.sh`
+6. Mobility foundation sequence: `scripts/slurm_mobility_foundation_eval.sh`
+7. Missing eval backfill wrapper: `scripts/run_missing_neurips_evals.sh`
+8. Full end-to-end local sequence wrapper: `scripts/run_full_eval_sequence.sh`
+9. Unified paper/eval wrapper: `scripts/run_paper_suite.sh`
 10. Next POI eval: `python -m route_rangers.cli.run_next_poi_eval ...`
 11. Cross-city transfer: `python -m route_rangers.cli.run_cross_city_transfer ...`
 
 ## Notes
 - Keep evals on the same dataset split for fair comparisons.
 - Log configs, random seeds, and hardware for reproducibility.
+- Keep data/report catalogs updated: `data/DATA_CATALOG.md` and `reports/EVAL_CATALOG.md`.
