@@ -1,0 +1,9 @@
+model,task,mae_m,rmse_m,n
+unitraj_eval_regression_best_20260324_170752,recovery,5.37,10.51,166673
+unitraj_eval_regression_best_20260324_170752,prediction,15.85,35.52,10000
+unitraj,recovery,17.16,47.15,132536
+unitraj,prediction,77.92,159.92,10000
+unitraj_eval_regression_robust_best_20260324_170752,recovery,32.88,44.69,166673
+unitraj_eval_regression_robust_best_20260324_170752,prediction,185.32,230.52,10000
+unitraj,recovery,17.16,47.15,132536
+unitraj,prediction,77.92,159.92,10000

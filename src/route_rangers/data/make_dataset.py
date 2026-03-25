@@ -1,4 +1,4 @@
-"""Utilities for loading source data into the CCDS structure."""
+"""Utilities for staging source data into the repository data layout."""
 
 from __future__ import annotations
 

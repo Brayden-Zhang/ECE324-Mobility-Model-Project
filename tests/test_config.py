@@ -1,4 +1,4 @@
-"""Basic checks for the CCDS project scaffold."""
+"""Basic checks for the repository path configuration."""
 
 from pathlib import Path
 import sys
@@ -19,8 +19,8 @@ class ConfigTests(unittest.TestCase):
         created_directories = config.ensure_project_directories()
         self.assertIn(config.RAW_DATA_DIR, created_directories)
         self.assertIn(config.PROCESSED_DATA_DIR, created_directories)
-        self.assertTrue(config.MODELS_DIR.exists())
-        self.assertTrue(config.FIGURES_DIR.exists())
+        self.assertTrue(config.CHECKPOINTS_DIR.exists())
+        self.assertTrue(config.PAPER_FIGURES_DIR.exists())
 
 
 if __name__ == "__main__":

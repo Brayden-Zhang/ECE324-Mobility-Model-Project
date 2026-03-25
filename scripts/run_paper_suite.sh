@@ -18,16 +18,16 @@ default_checkpoint() {
 
 default_local_data() {
   for p in \
-    "${ROOT_DIR}/data/worldtrace_sample.pkl" \
+    "${ROOT_DIR}/data/samples/worldtrace_sample.pkl" \
     "${ROOT_DIR}/data/worldtrace_sample.parquet" \
-    "${ROOT_DIR}/data/worldtrace_sample_nyc.pkl" \
+    "${ROOT_DIR}/data/samples/worldtrace_sample_nyc.pkl" \
     "${ROOT_DIR}/data/worldtrace/train.parquet"; do
     if [[ -f "${p}" ]]; then
       echo "${p}"
       return
     fi
   done
-  echo "${ROOT_DIR}/data/worldtrace_sample.pkl"
+  echo "${ROOT_DIR}/data/samples/worldtrace_sample.pkl"
 }
 
 CHECKPOINT="${CHECKPOINT:-$(default_checkpoint)}"
