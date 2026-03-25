@@ -189,10 +189,10 @@
     },
     {
       "stage": "Downstream task suite",
-      "gpu": "1x H100",
-      "cpus": "8",
-      "memory": "32G",
-      "time": "06:00:00"
+      "gpu": "CPU-only",
+      "cpus": "--",
+      "memory": "--",
+      "time": "--"
     },
     {
       "stage": "External UniTraj train",

@@ -21,9 +21,17 @@ results.tsv
 /.hf_cache/
 /cache/
 /external/
+/tmp/
+/artifacts/
+/outputs/
+/wandb/
 
-
-tests/
+# Keep tests/scripts code tracked; ignore generated outputs only
+tests/**/tmp/
+tests/**/outputs/
+tests/**/*.golden.generated*
+scripts/**/tmp/
+scripts/**/*.generated.*
 
 # Checkpoints and local weights
 /model.pt
@@ -34,6 +42,12 @@ tests/
 data/hdx/
 data/worldtrace/
 data/worldtrace_full/
+data/raw/
+data/**/*.zip
+data/**/*.tar
+data/**/*.tar.gz
+data/**/*.parquet
+data/**/*.feather
 
 # LaTeX build artifacts
 docs/*.aux
@@ -44,6 +58,7 @@ docs/*.fls
 docs/*.log
 docs/*.out
 docs/*.stdout
+docs/_minted-*/
 
 # Shell/script byproducts (keep real scripts tracked)
 *.sh.log

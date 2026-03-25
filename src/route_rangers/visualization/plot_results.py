@@ -48,35 +48,6 @@ def _save(fig: plt.Figure, stem: str) -> None:
     plt.close(fig)
 
 
-def plot_core_ablations(metrics: dict) -> None:
-    benchmark_rows = metrics.get("benchmarks", {})
-    labels = ["Full", "No graph", "No flow", "No trip", "LBTL (Ours)"]
-    run_order = [
-        "baseline_2239996",
-        "ablate_nograph_2239975",
-        "ablate_noflow_2239978",
-        "ablate_notrip_2239977",
-        "ablate_lenweight_2239980",
-    ]
-    recon = [benchmark_rows.get(run, {}).get("recon_l1", 0.0) for run in run_order]
-    next_top1 = [benchmark_rows.get(run, {}).get("next_top1", 0.0) for run in run_order]
-    dest = [benchmark_rows.get(run, {}).get("dest_top1", 0.0) for run in run_order]
-
-    x = np.arange(len(labels))
-    width = 0.24
-    fig, ax = plt.subplots(figsize=(10, 4.4))
-    ax.bar(x - width, recon, width, label="Recon@L1", color=COLORS["blue"], zorder=3)
-    ax.bar(x, next_top1, width, label="Next@Top1", color=COLORS["green"], zorder=3)
-    ax.bar(x + width, dest, width, label="Dest@Top1", color=COLORS["orange"], zorder=3)
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.set_ylim(0, 1.25)
-    ax.set_ylabel("Score")
-    ax.set_title("Core Probe Ablations")
-    ax.legend(ncol=3, loc="upper center", frameon=True)
-    _save(fig, "results_core_ablations")
-
-
 def plot_length_and_lsg(metrics: dict) -> None:
     length = metrics.get("length", {})
     short = length.get("short_dest_top1") or 0.0
@@ -200,7 +171,6 @@ def main() -> None:
     ensure_project_directories()
     _configure_matplotlib()
     metrics = build_paper_metrics()
-    plot_core_ablations(metrics)
     plot_length_and_lsg(metrics)
     plot_robustness_suite(metrics)
     plot_meter_scale(metrics)
