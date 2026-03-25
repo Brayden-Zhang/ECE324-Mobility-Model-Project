@@ -1,6 +1,28 @@
 # Route Rangers
 
+
 This repository is organized with the CCDS (`Cookiecutter Data Science`) structure so the project has a clean separation between data, code, notebooks, models, and reports from the start.
+
+## Project Overview
+
+This project investigates **length bias in trajectory machine learning models**.
+
+Human mobility trajectories (e.g., GPS traces from walking, biking, and driving) vary significantly in length, from short pedestrian trips to long commutes. However, many existing models treat all trajectories uniformly during training, which can introduce bias toward longer sequences.
+
+The goal of this project is to:
+- Analyze whether trajectory models disproportionately favor long trips  
+- Evaluate performance differences across trajectory lengths  
+- Explore methods such as **Length-Balanced Token Loss (LBTL)** to improve representation fairness  
+
+We implement and evaluate these ideas using a hierarchical mobility transformer (TrajectoryFM-HMT) and a custom evaluation framework for length sensitivity.
+
+## Key Contributions
+
+- Analysis of **length-induced bias** in trajectory representation learning  
+- Implementation of **Length-Balanced Token Loss (LBTL)**  
+- Introduction of **Length Sensitivity Gap (LSG)** as an evaluation metric  
+- A unified benchmark for evaluating performance across trajectory lengths  
+
 
 ## Quick start
 
