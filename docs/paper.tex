@@ -1,0 +1,545 @@
+\documentclass{article}
+
+\PassOptionsToPackage{numbers, compress}{natbib}
+\usepackage[preprint]{neurips_2026}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{multirow}
+\usetikzlibrary{shadows,shapes.geometric,decorations.pathmorphing,backgrounds,fit,graphs}
+\usetikzlibrary{arrows.meta,positioning,shadows,shapes.geometric,calc,fit,backgrounds}
+
+\newcommand{\nodetitle}{\sffamily\bfseries\color{black!90}}
+\newcommand{\nodecontent}{\sffamily\small\color{black!70}}
+
+\title{Evaluating Length Sensitivity in Trajectory Representation Models}
+
+\author{%
+  Brayden Zhang\\
+  University of Toronto\\
+  \texttt{brayden.zhang@mail.utoronto.ca}
+  \And
+  Eila Farnood\\
+  University of Toronto\\
+  \texttt{eila.farnood@mail.utoronto.ca}
+  \And
+  Rishika Singhal\\
+  University of Toronto\\
+  \texttt{rishika.singhal@mail.utoronto.ca}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Trajectory foundation models learn general-purpose mobility representations from large GPS corpora, but they are usually trained with token-level objectives that implicitly overweight longer trajectories. This can hide systematic performance disparities across sequence length. We present a rigorous study of \textbf{TrajectoryFM-HMT}, a hierarchical mobility transformer with multi-resolution \textbf{H3} tokens, flow matching, destination uncertainty modeling, and multi-scale consistency objectives. We introduce three key contributions: (i) \textbf{Length-Balanced Token Loss} (LBTL), (ii) \textbf{Length Sensitivity Gap} (LSG), and (iii) \textbf{LengthRobustBench}, a consolidated robustness protocol. On WorldTrace-derived evaluations, we observe negative LSG for both reconstruction and destination tasks, strong clean performance against an external UniTraj baseline under a shared wrapper, and clear robustness degradation under severe perturbations, and we propose concrete scaling directions.
+\end{abstract}
+
+\section{Introduction}
+Large-scale mobility datasets have enabled trajectory foundation models for reconstruction, next-step prediction, destination inference, and representation transfer \citep{choudhury2024trajectory,zhu2025unitraj}. Yet sequence length remains an under-characterized confounder: mobility traces naturally span very short local trips to long commutes, while most objectives average over tokens rather than trajectories.
+
+This induces a mismatch between training mass and deployment behavior. Long trajectories contribute more supervised positions, while endpoint tasks over long horizons accumulate uncertainty. Aggregate metrics can therefore mask systematic short-vs-long performance gaps.
+
+Figure~\ref{fig:intro_length_bias} visualizes both the empirical length heterogeneity in WorldTrace-like mobility traces and two mechanisms that can induce length bias: token-loss accumulation and fixed-size compression bottlenecks.
+
+\begin{figure*}[t]
+\centering
+\vspace{1em}
+\resizebox{0.95\textwidth}{!}{
+\begin{tikzpicture}[
+    font=\sffamily,
+    pan/.style={draw=black!20, fill=black!2, rounded corners=8pt, line width=1pt},
+    bar_s/.style={fill=indigo!40, rounded corners=2pt},
+    bar_m/.style={fill=indigo!65, rounded corners=2pt},
+    bar_l/.style={fill=indigo!90, rounded corners=2pt},
+    label_node/.style={font=\sffamily\bfseries\normalsize, text=black!80},
+    card/.style={draw=orange!40, fill=orange!5, rounded corners=6pt, align=center, font=\sffamily\small, inner sep=6pt, text width=3.5cm, drop shadow={opacity=0.1, shadow xshift=1pt, shadow yshift=-1pt}},
+    arrow/.style={-{Latex[length=3mm, width=2mm]}, thick, draw=black!50}
+]
+  \definecolor{indigo}{RGB}{75, 0, 130}
+
+  % Panel A
+  \node[pan, minimum width=7.5cm, minimum height=4.5cm] at (0,0) {};
+  \node[label_node, anchor=north west] at (-3.5, 2.0) {(A) Length Distribution};
+  
+  % Coordinates for bars
+  \begin{scope}[shift={(-3.0, -1.8)}]
+      \draw[->, black!50, line width=1pt] (0,0) -- (0,3.0) node[above, font=\scriptsize] {Density};
+      \draw[->, black!50, line width=1pt] (0,0) -- (6.5,0) node[right, font=\scriptsize] {Length};
+      
+      % Short bars
+      \fill[bar_s] (0.3, 0) rectangle (0.8, 0.4);
+      \fill[bar_s] (1.0, 0) rectangle (1.5, 0.9);
+      \fill[bar_s] (1.7, 0) rectangle (2.2, 1.5);
+      
+      % Medium bars
+      \fill[bar_m] (2.4, 0) rectangle (2.9, 2.2);
+      \fill[bar_m] (3.1, 0) rectangle (3.6, 2.5);
+      \fill[bar_m] (3.8, 0) rectangle (4.3, 1.9);
+      
+      % Long bars
+      \fill[bar_l] (4.5, 0) rectangle (5.0, 1.3);
+      \fill[bar_l] (5.2, 0) rectangle (5.7, 0.7);
+      \fill[bar_l] (5.9, 0) rectangle (6.4, 0.3);
+      
+      % Dividers
+      \draw[dashed, black!60, line width=1pt] (2.3, 0) -- (2.3, 2.8) node[above, font=\sffamily\bfseries\scriptsize, text=indigo!40] {Short};
+      \draw[dashed, black!60, line width=1pt] (4.4, 0) -- (4.4, 2.8) node[above, font=\sffamily\bfseries\scriptsize, text=indigo!65] {Medium};
+      \node[anchor=south, font=\sffamily\bfseries\scriptsize, text=indigo!90] at (5.45, 2.8) {Long};
+  \end{scope}
+
+  % Panel B
+  \node[pan, minimum width=8.5cm, minimum height=4.5cm] at (8.5,0) {};
+  \node[label_node, anchor=north west] at (4.5, 2.0) {(B) Causes for Long-Sequence Degradation};
+  
+  % Cards
+  \node[card] (c1) at (6.5, 0.7) {\textbf{Token-Loss Accumulation}\\Longer series dominate average loss};
+  \node[card] (c2) at (10.5, 0.7) {\textbf{Compression Bottleneck}\\Fixed-size pooling loses detail};
+  
+  \node[card, draw=red!40, fill=red!5, text width=6.5cm] (c3) at (8.5, -1.0) {\textbf{Endpoint Uncertainty}\\Prediction errors compound over extended horizons};
+
+  \draw[arrow] (c1) -- (c3.north -| c1.south);
+  \draw[arrow] (c2) -- (c3.north -| c2.south);
+
+\end{tikzpicture}
+}
+\vspace{0.5em}
+\caption{Length heterogeneity and potential length bias in trajectory models. (A) Conceptual distribution of trajectory lengths, naturally split into short, medium, and long contexts. (B) Core mechanisms explaining why long sequences tend to suffer performance degradation compared to short local trips.}
+\label{fig:intro_length_bias}
+\end{figure*}
+
+In this paper we reframe length as a first-class axis of evaluation and architecture analysis. We thoroughly evaluate and establish these claims across our comprehensive experimental suite.
+
+Through this work, we aim to answer four questions: whether trajectory models show systematic long-minus-short degradation; whether length-balanced training reduces this gap; whether the gap remains under invariance and temporal-order stress tests; and how strong clean performance relates to robustness under perturbations.
+\newpage
+\paragraph{Contributions}
+We present an evaluation-centric study of length sensitivity using TrajectoryFM-HMT as a controlled testbed. We propose \textbf{Length-Balanced Token Loss} (LBTL) as a length-aware training objective, define the \textbf{Length Sensitivity Gap} (LSG), and introduce \textbf{LengthRobustBench}, a unified protocol spanning length stratification, robustness checks, and meter-scale prediction. The checked-in artifact set supports a focused empirical comparison against a UniTraj reference baseline and a set of destination-oriented robustness diagnostics.
+
+\section{Related Work}
+\paragraph{Trajectory representation and foundation modeling.}
+Trajectory modeling has evolved from next-location forecasting architectures such as DeepMove \citep{feng2018deepmove} to large-scale pretraining paradigms designed to learn reusable mobility representations across tasks and regions \citep{zhang2023regions,lin2024trajfm,ma2024jgrm,choudhury2024trajectory,zhu2025unitraj}. This progression mirrors broader foundation-model trends: larger corpora, multi-objective training, and richer transfer evaluations. Our work operates in this regime but focuses on an under-reported axis, whether performance is stable across trajectory length rather than only strong on aggregate metrics.
+
+\paragraph{Generative and uncertainty-aware trajectory learning.}
+Recent trajectory research has also emphasized generative formulations and stochastic forecasting, including diffusion-based synthesis \citep{zhu2023difftraj} and contrastive objectives for prediction quality \citep{yao2024trajclip}. We share the goal of robust mobility modeling, but center evaluation on length-conditioned behavior in reconstruction and destination tasks, and on protocol-level robustness under controlled perturbations.
+
+\paragraph{Length sensitivity in long-context sequence models.}
+Length effects are well studied in general sequence modeling: Transformer baselines \citep{vaswani2017attention}, long-context attention designs \citep{beltagy2020longformer,zaheer2020bigbird}, positional/extrapolation strategies \citep{su2021roformer,press2022trainshort}, and context-usage diagnostics \citep{liu2024lost}. These advances motivate our analysis, but they do not directly provide mobility-specific diagnostics for short-vs-long degradation under trajectory perturbations.
+
+\paragraph{Positioning of this paper.}
+Relative to prior work, our contributions target the gap between strong average performance and length-robust behavior: LBTL rebalances token loss at trajectory granularity, LSG directly quantifies long-minus-short gaps, and LengthRobustBench unifies length stratification with invariance, order-stress, embedding-stability, and meter-scale recovery/prediction tests.
+
+\section{Problem Formulation: Length Bias in Trajectory Models}
+We first formalize why standard training objectives systematically under-supervise long trajectories and how error accumulation creates a robust performance gap.
+
+\subsection{Mechanisms of Degradation}
+We identify four coupled mechanisms that degrade performance for long trajectories:
+\begin{enumerate}
+    \item \textbf{Objective-Mass Imbalance}: Token-level averaging provides longer sequences with disproportionate gradient mass, but per-trajectory supervision is diluted.
+    \item \textbf{Compounding Endpoint Uncertainty}: Destination prediction integrates local errors over extended horizons, causing variance to grow with length $L$.
+    \item \textbf{Hierarchical Compression Noise}: Aggregating step-level tokens into regions introduces information loss that scales with trajectory complexity.
+    \item \textbf{Context Dilution}: Within a fixed model capacity, expanding contexts linearly amplifies the number of competing tokens, challenging long-range signal preservation.
+\end{enumerate}
+
+\section{Methodology: TrajectoryFM-HMT}
+We propose \textbf{TrajectoryFM-HMT}, a hierarchical mobility transformer designed to mitigate length sensitivity through multi-resolution tokenization and balanced supervision.
+
+\subsection{Architecture Overview}
+Figure~\ref{fig:hmt_pipeline} summarizes the HMT architecture. The model processes raw GPS coordinates into a hierarchical latent space, applying flow matching and masked modeling objectives.
+
+\begin{figure*}[t]
+\centering
+\vspace{1em}
+\resizebox{0.95\textwidth}{!}{
+\begin{tikzpicture}[
+    node distance=0.8cm and 0.8cm,
+    font=\sffamily,
+    >={Latex[width=3mm,length=3mm]},
+    box/.style={
+        draw=black!70,
+        rounded corners=4pt,
+        align=center,
+        inner sep=8pt,
+        text width=3.2cm,
+        minimum height=2.2cm,
+        drop shadow={opacity=0.15, shadow xshift=2pt, shadow yshift=-2pt},
+        line width=1.0pt,
+        fill=white
+    },
+    group/.style={
+        draw=black!20,
+        rounded corners=8pt,
+        inner sep=12pt,
+        fill=black!2,
+        line width=1pt
+    },
+    input/.style={box, fill=blue!5, draw=blue!50!black},
+    embed/.style={box, fill=teal!5, draw=teal!50!black},
+    hier/.style={box, fill=purple!5, draw=purple!50!black},
+    output/.style={box, fill=orange!5, draw=orange!50!black},
+    arrow/.style={->, line width=1.5pt, draw=black!40},
+    title/.style={font=\sffamily\bfseries\normalsize, text=black!90},
+    content/.style={font=\sffamily\small, text=black!70}
+]
+
+    % Nodes
+    \node[input] (in) {
+        {\nodetitle Input Tensors}\\[4pt]
+        {\nodecontent Coordinates $\mathbf{X}$}\\
+        {\nodecontent Timestamps $\mathbf{T}$}\\
+        {\nodecontent Attention Masks $\mathbf{M}$}
+    };
+    
+    \node[embed, right=of in] (tok) {
+        {\nodetitle Tokenization}\\[4pt]
+        {\nodecontent H3 Grid $(l_0,l_1,l_2)$}\\
+        {\nodecontent Temporal Features}\\
+        {\nodecontent Context Embeddings}
+    };
+    
+    \node[embed, right=of tok] (enc) {
+        {\nodetitle Step-level Encode}\\[4pt]
+        {\nodecontent Feature Fusion}\\
+        {\nodecontent Space-Time Encode}\\
+        {\nodecontent Geodesic Maps}
+    };
+    
+    \node[hier, right=of enc] (hier) {
+        {\nodetitle Hierarchy Map}\\[4pt]
+        {\nodecontent Macroscopic Tokens}\\
+        {\nodecontent Step-to-Region}\\
+        {\nodecontent Dynamic Masking}
+    };
+    
+    \node[output, right=of hier] (out) {
+        {\nodetitle Task Projections}\\[4pt]
+        {\nodecontent Sequence MLM}\\
+        {\nodecontent Flow Matching}\\
+        {\nodecontent Destination Heads}
+    };
+
+    % Draw Arrows
+    \draw[arrow] (in) -- (tok);
+    \draw[arrow] (tok) -- (enc);
+    \draw[arrow] (enc) -- (hier);
+    \draw[arrow] (hier) -- (out);
+
+    % Background groupings
+    \begin{scope}[on background layer]
+        \node[group, fit=(tok) (enc), label={[font=\sffamily\bfseries, text=black!50, anchor=south]south:Representation Mapping}] {};
+        \node[group, fit=(hier) (out), label={[font=\sffamily\bfseries, text=black!50, anchor=south]south:Objective Alignment \& Prediction}] {};
+    \end{scope}
+
+\end{tikzpicture}
+}
+\caption{The TrajectoryFM-HMT architecture. The framework processes continuous geometric coordinate streams into hierarchical representations, projecting them into specialized latent spaces for trajectory completion and downstream destination forecasting.}
+\label{fig:hmt_pipeline}
+\end{figure*}
+
+\subsection{Module Specification}
+Table~\ref{tab:model_spec} details the configuration of the core HMT modules. We streamline the design to focus on essential mobility features.
+
+\begin{table}[h]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.2}
+\caption{TrajectoryFM-HMT Core Configuration.}
+\label{tab:model_spec}
+\begin{tabular}{@{}lp{0.35\linewidth}p{0.3\linewidth}@{}}
+\toprule
+\textbf{Component} & \textbf{Mechanism} & \textbf{Configuration} \\
+\midrule
+\textbf{Tokenizer} & Multi-res H3 sampling & Levels $(9,7,5)$, Vocab $\approx 21$K \\
+\textbf{Encoder} & Additive orthogonal states & Dim $\mathcal{D}=256$, MLP Projection \\
+\textbf{Routing} & Macro-token synthesis & Curriculum masking \\
+\textbf{Hierarchy} & RoPE-aware attention & Depth=8, Heads=8, FFN=1024 \\
+\textbf{Projectors} & Flow \& uncertainty heads & Heteroscedastic endpoints \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Length-Balanced Token Loss (LBTL)}
+To address length bias, we introduce LBTL. Standard masked cross-entropy is effectively length-weighted:
+\begin{equation}
+\mathcal{L}^{\text{std}}_{\text{tok}}=\frac{\sum_b\sum_{t=1}^{m_b}\ell_{b,t}}{\sum_b m_b}
+\end{equation}
+LBTL strictly enforces equal mass per trajectory, regardless of length $m_b$:
+\begin{equation}
+\mathcal{L}^{\text{lb}}_{\text{tok}}=\frac{1}{B}\sum_{b=1}^{B}\left(\frac{1}{\max(1,m_b)}\sum_{t=1}^{m_b}\ell_{b,t}\right)
+\end{equation}
+This normalization ensures that short, local trips contribute equally to gradient updates as long commutes, stabilizing optimization across the length spectrum.
+Total training loss combines reconstruction, flow matching, and destination probing:
+\begin{equation}
+\mathcal{L} = w_{\text{tok}}\mathcal{L}_{\text{lb}} + w_{\text{flow}}\mathcal{L}_{\text{flow}} + w_{\text{dest}}\mathcal{L}_{\text{dest}} + w_{\text{misc}}\mathcal{L}_{\text{misc}}
+\end{equation}
+
+\section{Experiments}
+\subsection{Datasets}
+% \begin{table}[t]
+% \centering
+% \caption{Datasets used in this study.}
+% \label{tab:data}
+% \begin{tabular}{p{0.22\linewidth}p{0.23\linewidth}p{0.45\linewidth}}
+% \toprule
+% Dataset & Scale & Usage \\
+% \midrule
+% WorldTrace & $\sim$2.4M trajectories, $\sim$8.8B GPS points & Core pretraining/evaluation for trajectory tasks \\
+
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+We use WorldTrace (approximately 2.4M trajectories and 8.8B GPS points) as the primary corpus for pretraining and trajectory-task evaluation. For reproducible experiments in this paper, we report benchmark results on a fixed 2,000-trajectory subset.
+
+\subsection{Preprocessing pipeline}
+We process raw GPS trajectories $\mathcal{T} = \{\mathbf{p}_1, \dots, \mathbf{p}_N\}$, where each point $\mathbf{p}_i$ is a tuple of latitude, longitude, and timestamp. We normalize all coordinates to the range $[-90^{\circ}, 90^{\circ}] \times [-180^{\circ}, 180^{\circ}]$.
+
+Trajectories longer than our context window $L_{\max}$ are downsampled to fit. The model inputs are: (1) spatial coordinates $\mathbf{X} \in \mathbb{R}^{B \times L_{\max} \times 2}$, (2) timestamps $\mathbf{t} \in \mathbb{R}^{B \times L_{\max}}$, and (3) boolean attention masks $\mathbf{M}$. We use a dynamic masking strategy during training, where the masking probability $p_{\mathrm{mask}}$ is annealed over time.
+
+
+\subsection{Evaluation Protocol: LengthRobustBench}
+
+To carefully measure how trajectory models perform across different sequence lengths and input perturbations, we introduce \textbf{LengthRobustBench}, an end-to-end testing suite. 
+
+\subsubsection{Length Sensitivity Gap (LSG)}
+We define the Length Sensitivity Gap (LSG) to quantify performance differences across trajectory lengths. We partition the test set into subsets based on length quantiles: short ($\mathcal{S}_{\text{short}}$) and long ($\mathcal{S}_{\text{long}}$). For a given metric $\mathcal{M}$ (where higher is better), the mean performance on a subset $\mathcal{S}$ is $\mu_{\mathcal{M}}(\mathcal{S})$.
+
+We define LSG as the difference in performance between long and short trajectories:
+\begin{equation}
+\mathrm{LSG}_{\mathcal{M}} = \mu_{\mathcal{M}}(\mathcal{S}_{\text{long}}) - \mu_{\mathcal{M}}(\mathcal{S}_{\text{short}})
+\end{equation}
+A negative LSG indicates that the model performs worse on longer trajectories, revealing length bias. A value close to zero indicates length robustness.
+
+\subsection{Evaluation Metrics}
+We use the following metrics to evaluate model performance:
+
+\begin{itemize}
+    \item \textbf{Recon@L1}: The mean absolute error ($\ell_1$ distance in meters) between predicted and actual coordinates for masked steps.
+    \item \textbf{Next@Top1}: Adjusted accuracy for predicting the immediate next H3 token in the sequence.
+    \item \textbf{Dest-Local@Top1}: Top-1 accuracy for destination prediction, evaluated within a dynamic local candidate set (radius constrained).
+    \item \textbf{Dest-Global@Top1}: Top-1 accuracy for destination prediction over the entire global vocabulary.
+    \item \textbf{Change Detection AUC}: Area Under the ROC Curve for distinguishing between valid trajectory continuations and anomalous/perturbed ones.
+    \item \textbf{NLL}: Negative Log-Likelihood of the ground truth sequence, measuring model uncertainty.
+\end{itemize}
+
+\subsection{Training and Evaluation Details}
+\paragraph{Data regime and stratification.}
+Unless noted otherwise, experiments use a fixed 2,000-trajectory subset. Length analysis uses the quantile thresholds in Table~\ref{tab:length} (164 and 601), yielding short/medium/long strata for LSG computation.
+
+\paragraph{Model and checkpoint protocol.}
+Primary results uniformly evaluate our designated principal checkpoint. Ablations share the same wrapper and reporting format so differences can be interpreted as controlled objective/component changes rather than changes in metric code.
+
+\paragraph{Metric protocol.}
+We report Recon@L1, Next@Top1, and two destination metrics with different label spaces: Dest-Global@Top1 (strict full-vocabulary destination classification) and Dest-Local@Top1 (candidate-constrained destination ranking in LengthRobustBench).
+
+\paragraph{Open reproducibility package.}
+The repository includes the paper source, checked-in summary artifacts, and code paths that regenerate the paper figures and tables from those artifacts. Large checkpoints and raw cache directories are intentionally kept outside Git.
+
+\paragraph{Reporting scope.}
+Main tables report deterministic point estimates from fixed checkpoints and dataset splits. Where the checked-in repository preserves only summary-level artifacts, we report those values directly and avoid unsupported claims about multi-run training variance.
+
+\section{Results}
+We report results in three parts: length-conditioned destination degradation, robustness diagnostics, and meter-scale clean comparison.
+
+We emphasize destination prediction capabilities using Dest-Local@Top1, which measures candidate-constrained destination ranking under the unified LengthRobustBench representation. This formulation isolates sequence-conditioned degradation without the confound of a global label space.
+
+\subsection{Length-stratified destination degradation}
+\label{sec:length_results}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/results_length_lsg}
+\caption{Short-versus-long destination accuracy derived from the checked-in length-sensitivity artifact. The annotation reports LSG = long - short.}
+\label{fig:results_length_lsg}
+\end{figure}
+
+\input{../reports/paper_length_table.tex}
+
+\begin{equation}
+\mathrm{LSG}_{\text{Dest-Local@Top1}}=-0.1367.
+\end{equation}
+The checked-in LengthRobustBench artifact shows a clear long-horizon degradation rather than a near-zero gap: short-bucket destination accuracy is approximately 0.776, while long-bucket accuracy falls to 0.640. We therefore interpret the current evidence as confirming measurable length sensitivity, even for a strong checkpoint.
+
+\subsection{Invariance, order sensitivity, and embedding consistency}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/results_robustness_suite}
+\caption{LengthRobustBench diagnostics figure panel: prefix scaling, reverse-order stress, and change-detection separation.}
+\label{fig:results_robustness_suite}
+\end{figure*}
+
+\input{../reports/paper_robustness_table.tex}
+
+The robustness picture is mixed rather than uniformly solved. Prefix performance improves steadily with more observed context, moderate time shifts have little effect at the tested offsets, and change detection is strong (AUC 0.957). However, reverse-order stress still causes a substantial drop in top-1 accuracy and a large increase in NLL, showing that temporal order remains a meaningful failure mode.
+
+\subsection{HMT vs UniTraj on meter-scale evaluation}
+We directly compare TrajectoryFM-HMT against the UniTraj reference baseline on both trajectory recovery and next-step prediction tasks. As shown in Table~\ref{tab:unitraj_main} and Figure~\ref{fig:results_meter_scale}, HMT yields large meter-scale gains under the shared wrapper.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=1.0\linewidth]{figures/results_meter_scale}
+\caption{Meter-scale recovery/prediction comparison. HMT consistently outperforms the UniTraj reference baseline, with roughly 68--80\% relative error reduction across MAE and RMSE metrics.}
+\label{fig:results_meter_scale}
+\end{figure}
+
+\input{../reports/paper_unitraj_main.tex}
+
+For trajectory recovery, HMT reduces MAE from 17.16m to 5.37m. For next-step prediction, MAE drops from 77.92m to 15.85m. These are strong empirical gains, although they should still be interpreted under the shared-wrapper caveat below rather than as a final matched-budget leaderboard result.
+
+\textbf{Comparison caveat.} The HMT--UniTraj comparison uses a shared evaluation wrapper but not architecture-matched training budgets/checkpoint provenance. We interpret this as strong empirical evidence, not a final leaderboard claim.
+
+\subsection{Macro head snapshot}
+
+\input{../reports/paper_macro_table.tex}
+
+Requested scheduler budgets for the main training and evaluation entrypoints are reported in Appendix Table~\ref{tab:compute_resources}.
+
+\section{Scaling and Future Work}
+Future scaling directions are straightforward from existing infrastructure: (i) full-scale multi-epoch WorldTrace with geographic OOD splits; (ii) longer-context sparse attention and hierarchical memory; (iii) dynamic multi-objective reweighting and robustness curricula; and (iv) strict robust benchmark parity runs against UniTraj under matched perturbation budgets and compute.
+
+\section{Discussion}
+Overall, the current evidence shows that TrajectoryFM-HMT is strong in clean meter-scale recovery and prediction, but still exhibits a measurable long-horizon destination gap and a clear reverse-order failure mode. The main contribution is therefore not a blanket robustness claim; it is a reproducible length-sensitivity evaluation framing with concrete, code-backed diagnostics.
+
+\section{Limitations and Ethics}
+Our analysis emphasizes length, but mobility models should also be audited for geographic, socioeconomic, and temporal subgroup bias. Some repo extensions are currently validated on synthetic or proxy settings and require large real-world studies before deployment conclusions. As always with trajectory data, privacy risk remains material even after anonymization; deployment should include strict governance, aggregation controls, and privacy-preserving training where feasible.
+
+\section{Broader Impacts and Safeguards}
+\paragraph{Potential positive impact.}
+Length-robust trajectory modeling can improve transportation planning, demand forecasting, and emergency response routing by reducing short-vs-long trip performance disparity and improving reliability under perturbations.
+
+\paragraph{Potential negative impact.}
+Mobility models can be misused for surveillance, sensitive population monitoring, or unfair allocation decisions if deployed without governance. Even anonymized trajectories can carry re-identification risk when combined with auxiliary data.
+
+\paragraph{Safeguards in this release.}
+We provide a reproducibility-oriented research release (code, scripts, checked-in summary artifacts, and figure/table generation paths) and do not present deployment claims. We explicitly document robustness failure modes, encourage subgroup auditing before real-world use, and recommend access controls, aggregation thresholds, and privacy-preserving training for operational settings.
+
+\section{Conclusion}
+This work delivers an evaluation-first analysis of length sensitivity in trajectory foundation modeling. Using TrajectoryFM-HMT as an instrumented backbone, we introduce LBTL, LSG, and LengthRobustBench, and provide reproducible evidence that length materially affects behavior even when aggregate performance is strong.
+
+\appendix
+\section{Appendix: Reproducibility Notes}
+We ensure high-fidelity reproducibility of our entire suite.
+
+\subsection{Licenses and terms for external assets}
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{External assets used in this work and their licenses/terms.}
+\label{tab:asset_licenses}
+\begin{tabular}{
+    >{\raggedright\arraybackslash}p{0.18\linewidth}
+    >{\raggedright\arraybackslash}p{0.21\linewidth}
+    >{\raggedright\arraybackslash}p{0.15\linewidth}
+    >{\raggedright\arraybackslash}p{0.34\linewidth}}
+\toprule
+Asset & Source & License/terms & How used in this work \\
+\midrule
+WorldTrace dataset & Hugging Face: OpenTrace/\allowbreak WorldTrace & ODbL 1.0 & Pretraining/evaluation source; the paper reports fixed local-subset results \\
+H3 geospatial indexing & Uber H3 (\url{https://h3geo.org}) & Apache-2.0 & Multi-resolution tokenization backend \\
+OpenStreetMap Context & OSM data (\url{https://www.openstreetmap.org}) & ODbL 1.0 & Rich context features via OSM index pipeline \\
+UniTraj reference code/checkpoint & \url{https://github.com/vita-epfl/UniTraj} & AGPL-3.0 & External baseline evaluation under shared wrapper \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Moved Main-Text Tables}
+Clean UniTraj-style meter-scale comparisons are moved to Appendix Table~\ref{tab:unitraj_clean}.
+
+\input{../reports/paper_unitraj_clean.tex}
+
+\subsection{Compute resource budgets}
+\input{../reports/paper_compute_table.tex}
+
+\section{Scope Change Statement}
+No scope change is declared relative to the current project direction. If scope changes are made later, this section will describe what changed and why.
+
+\newpage
+\section*{NeurIPS Paper Checklist}
+\input{neurips_checklist}
+
+\begin{thebibliography}{99}
+\bibitem[Beltagy et~al.(2020)]{beltagy2020longformer}
+Beltagy, I., Peters, M.~E., and Cohan, A.
+\newblock Longformer: The Long-Document Transformer.
+\newblock arXiv preprint arXiv:2004.05150, 2020.
+
+\bibitem[Choudhury et~al.(2024)]{choudhury2024trajectory}
+Choudhury, M., et~al.
+\newblock Towards a Trajectory-powered Foundation Model of Mobility.
+\newblock arXiv preprint arXiv:2408.06915, 2024.
+
+\bibitem[Feng et~al.(2018)]{feng2018deepmove}
+Feng, J., Li, Y., Zhang, C., Sun, F., Meng, F., and Jin, D.
+\newblock DeepMove: Predicting Human Mobility with Attentional Recurrent Networks.
+\newblock In \emph{Proceedings of the 2018 World Wide Web Conference}, 2018.
+
+\bibitem[Lin et~al.(2024)]{lin2024trajfm}
+Lin, B., Song, C., Li, Z., et~al.
+\newblock TrajFM: A Foundation Model for Human Trajectory Data.
+\newblock arXiv preprint arXiv:2402.16915, 2024.
+
+\bibitem[Liu et~al.(2024)]{liu2024lost}
+Liu, N.~F., Lin, K., Hewitt, J., Paranjape, A., Bevilacqua, M., Petroni, F., and Liang, P.
+\newblock Lost in the Middle: How Language Models Use Long Contexts.
+\newblock Transactions of the Association for Computational Linguistics, 12:157--173, 2024.
+
+\bibitem[Ma et~al.(2024)]{ma2024jgrm}
+Ma, Y., Zhang, X., Li, J., et~al.
+\newblock JGRM: Joint Graph Representation Learning on Multimodal Trajectories.
+\newblock arXiv preprint arXiv:2403.04561, 2024.
+
+\bibitem[Press et~al.(2022)]{press2022trainshort}
+Press, O., Smith, N.~A., and Lewis, M.
+\newblock Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation.
+\newblock In \emph{ICLR}, 2022.
+
+\bibitem[Su et~al.(2021)]{su2021roformer}
+Su, J., Lu, Y., Pan, S., et~al.
+\newblock RoFormer: Enhanced Transformer with Rotary Position Embedding.
+\newblock arXiv preprint arXiv:2104.09864, 2021.
+
+\bibitem[Vaswani et~al.(2017)]{vaswani2017attention}
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.~N., Kaiser, L., and Polosukhin, I.
+\newblock Attention Is All You Need.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2017.
+
+\bibitem[Yao et~al.(2024)]{yao2024trajclip}
+Yao, D., Gao, C., Li, S., et~al.
+\newblock TrajCLIP: Semantic-Aware Pretraining for Trajectory Representation.
+\newblock In \emph{SIGKDD}, 2024.
+
+\bibitem[Zaheer et~al.(2020)]{zaheer2020bigbird}
+Zaheer, M., Guruganesh, G., Dubey, K.~A., Ainslie, J., Alberti, C., Ontanon, S., Pham, P., Ravula, A., Wang, Q., Yang, L., et~al.
+\newblock Big Bird: Transformers for Longer Sequences.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2020.
+
+\bibitem[Zhang et~al.(2023)]{zhang2023regions}
+Zhang, Y., Li, T., Wang, Y., et~al.
+\newblock Regions, Periods, and Activities: Hierarchical Representation Learning for Human Mobility.
+\newblock In \emph{SIGKDD}, 2023.
+
+\bibitem[Zhu et~al.(2023)]{zhu2023difftraj}
+Zhu, Y., Li, Z., Wang, X., et~al.
+\newblock DiffTraj: Generating GPS Trajectories from Textural Descriptions.
+\newblock In \emph{NeurIPS}, 2023.
+
+\bibitem[Zhu et~al.(2025)]{zhu2025unitraj}
+Zhu, Y., et~al.
+\newblock UniTraj: A Unified Framework for Trajectory Representation Learning.
+\newblock In \emph{ICLR}, 2025.
+
+\end{thebibliography}
+
+\end{document}

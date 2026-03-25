@@ -1,11 +1,210 @@
-"""Visualization entry point for exported figures."""
+"""Generate the paper figures under docs/figures."""
 
-from route_rangers.config import FIGURES_DIR, ensure_project_directories
+from __future__ import annotations
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from route_rangers.config import PAPER_FIGURES_DIR, ensure_project_directories
+from route_rangers.reporting import build_paper_metrics
+
+
+COLORS = {
+    "blue": "#1f77b4",
+    "orange": "#ff7f0e",
+    "green": "#2ca02c",
+    "red": "#d62728",
+    "gray": "#7f7f7f",
+}
+
+
+def _configure_matplotlib() -> None:
+    plt.rcParams.update(
+        {
+            "font.family": "serif",
+            "font.serif": ["Times New Roman", "Times", "DejaVu Serif", "serif"],
+            "font.size": 10,
+            "axes.labelsize": 11,
+            "axes.titlesize": 12,
+            "xtick.labelsize": 10,
+            "ytick.labelsize": 10,
+            "legend.fontsize": 9,
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "axes.grid": True,
+            "grid.alpha": 0.25,
+            "grid.linestyle": "--",
+            "savefig.dpi": 300,
+            "savefig.bbox": "tight",
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
+        }
+    )
+
+
+def _save(fig: plt.Figure, stem: str) -> None:
+    fig.savefig(PAPER_FIGURES_DIR / f"{stem}.png")
+    fig.savefig(PAPER_FIGURES_DIR / f"{stem}.pdf")
+    plt.close(fig)
+
+
+def plot_core_ablations(metrics: dict) -> None:
+    benchmark_rows = metrics.get("benchmarks", {})
+    labels = ["Full", "No graph", "No flow", "No trip", "LBTL (Ours)"]
+    run_order = [
+        "baseline_2239996",
+        "ablate_nograph_2239975",
+        "ablate_noflow_2239978",
+        "ablate_notrip_2239977",
+        "ablate_lenweight_2239980",
+    ]
+    recon = [benchmark_rows.get(run, {}).get("recon_l1", 0.0) for run in run_order]
+    next_top1 = [benchmark_rows.get(run, {}).get("next_top1", 0.0) for run in run_order]
+    dest = [benchmark_rows.get(run, {}).get("dest_top1", 0.0) for run in run_order]
+
+    x = np.arange(len(labels))
+    width = 0.24
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    ax.bar(x - width, recon, width, label="Recon@L1", color=COLORS["blue"], zorder=3)
+    ax.bar(x, next_top1, width, label="Next@Top1", color=COLORS["green"], zorder=3)
+    ax.bar(x + width, dest, width, label="Dest@Top1", color=COLORS["orange"], zorder=3)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylim(0, 1.25)
+    ax.set_ylabel("Score")
+    ax.set_title("Core Probe Ablations")
+    ax.legend(ncol=3, loc="upper center", frameon=True)
+    _save(fig, "results_core_ablations")
+
+
+def plot_length_and_lsg(metrics: dict) -> None:
+    length = metrics.get("length", {})
+    short = length.get("short_dest_top1") or 0.0
+    long = length.get("long_dest_top1") or 0.0
+    gap = length.get("gap_dest_top1") or (long - short)
+
+    labels = ["Short", "Long"]
+    values = [short, long]
+    x = np.arange(len(labels))
+    fig, ax = plt.subplots(figsize=(6.6, 4.6))
+    bars = ax.bar(x, values, width=0.55, color=[COLORS["blue"], COLORS["orange"]], zorder=3)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylim(0.0, 1.0)
+    ax.set_ylabel("Dest-Local@Top1")
+    ax.set_title("Length Sensitivity")
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            height + 0.02,
+            f"{height:.3f}",
+            ha="center",
+            va="bottom",
+        )
+    bins = length.get("bins")
+    bins_line = f"Bins: {bins[0]}, {bins[1]}" if bins else "Bins from checked-in artifact"
+    ax.text(
+        0.03,
+        0.12,
+        f"{bins_line}\nLSG (long - short) = {gap:.3f}",
+        transform=ax.transAxes,
+        bbox={"boxstyle": "round,pad=0.4", "facecolor": "white", "alpha": 0.9},
+    )
+    _save(fig, "results_length_lsg")
+
+
+def plot_robustness_suite(metrics: dict) -> None:
+    inv = metrics.get("invariance", {})
+    reverse_order = metrics.get("reverse_order", {})
+    change = metrics.get("change_detection", {})
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.4))
+
+    prefix = inv.get("prefix_dest_top1", {})
+    prefix_x = [0.25, 0.50, 0.75, 1.00]
+    prefix_y = [prefix.get(f"{value:.2f}", 0.0) for value in prefix_x]
+    axes[0].plot(prefix_x, prefix_y, marker="o", linewidth=2.5, color=COLORS["blue"])
+    axes[0].set_title("Prefix Invariance")
+    axes[0].set_xlabel("Observed ratio")
+    axes[0].set_ylabel("Dest@Top1")
+    axes[0].set_xticks(prefix_x)
+    axes[0].set_xticklabels(["25%", "50%", "75%", "100%"])
+    axes[0].set_ylim(0.55, 0.74)
+
+    labels = ["Original", "Reversed"]
+    original = reverse_order.get("original", {})
+    reversed_metrics = reverse_order.get("reversed", {})
+    top1 = [original.get("top1", 0.0), reversed_metrics.get("top1", 0.0)]
+    top5 = [original.get("top5", 0.0), reversed_metrics.get("top5", 0.0)]
+    x = np.arange(len(labels))
+    width = 0.34
+    axes[1].bar(x - width / 2, top1, width, label="Top-1", color=COLORS["green"], zorder=3)
+    axes[1].bar(x + width / 2, top5, width, label="Top-5", color=COLORS["blue"], zorder=3)
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(labels)
+    axes[1].set_ylim(0.4, 1.0)
+    axes[1].set_title("Reverse-Order Stress")
+    axes[1].legend(frameon=True)
+
+    cd_labels = ["Pos dist", "Neg dist", "AUC"]
+    cd_values = [
+        change.get("pos_mean_dist", 0.0),
+        change.get("neg_mean_dist", 0.0),
+        change.get("auc", 0.0),
+    ]
+    axes[2].bar(cd_labels, cd_values, color=[COLORS["orange"], COLORS["gray"], COLORS["red"]], zorder=3)
+    axes[2].set_ylim(0, 1.1)
+    axes[2].set_title("Change Detection")
+
+    _save(fig, "results_robustness_suite")
+
+
+def plot_meter_scale(metrics: dict) -> None:
+    clean = metrics.get("unitraj_clean", {})
+    recovery = clean.get("recovery", {})
+    prediction = clean.get("prediction", {})
+    hmt_mae = [recovery.get("hmt_mae_m", 0.0), prediction.get("hmt_mae_m", 0.0)]
+    unitraj_mae = [
+        recovery.get("baseline_mae_m", 0.0),
+        prediction.get("baseline_mae_m", 0.0),
+    ]
+
+    hmt_rmse = [recovery.get("hmt_rmse_m", 0.0), prediction.get("hmt_rmse_m", 0.0)]
+    unitraj_rmse = [
+        recovery.get("baseline_rmse_m", 0.0),
+        prediction.get("baseline_rmse_m", 0.0),
+    ]
+    tasks = ["Recovery", "Prediction"]
+    x = np.arange(len(tasks))
+    width = 0.34
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
+    axes[0].bar(x - width / 2, hmt_mae, width, label="HMT", color=COLORS["blue"], zorder=3)
+    axes[0].bar(x + width / 2, unitraj_mae, width, label="UniTraj", color=COLORS["gray"], zorder=3)
+    axes[0].set_title("MAE (m)")
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(tasks)
+    axes[0].set_ylabel("Meters")
+
+    axes[1].bar(x - width / 2, hmt_rmse, width, label="HMT", color=COLORS["blue"], zorder=3)
+    axes[1].bar(x + width / 2, unitraj_rmse, width, label="UniTraj", color=COLORS["gray"], zorder=3)
+    axes[1].set_title("RMSE (m)")
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(tasks)
+    axes[1].legend(frameon=True)
+
+    _save(fig, "results_meter_scale")
 
 
 def main() -> None:
     ensure_project_directories()
-    print(f"Implement report plots here and export figures to {FIGURES_DIR}")
+    _configure_matplotlib()
+    metrics = build_paper_metrics()
+    plot_core_ablations(metrics)
+    plot_length_and_lsg(metrics)
+    plot_robustness_suite(metrics)
+    plot_meter_scale(metrics)
+    print(f"Wrote paper figures to {PAPER_FIGURES_DIR}")
 
 
 if __name__ == "__main__":

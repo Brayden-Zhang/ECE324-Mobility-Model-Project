@@ -1,0 +1,62 @@
+# Foundation-Model Downstream Report
+
+Coverage: 16/18 tasks have at least one metric.
+
+| task | metric | dir | model | baseline | delta | model_artifact | baseline_artifact | status |
+|---|---|---|---|---|---|---|---|---|
+| anomaly_detection | combined_auroc | ↑ | 0.5789 | n/a | n/a | anomaly_detection_2517828.json | n/a | ok |
+| anomaly_detection | combined_pr_auc | ↑ | 0.6095 | n/a | n/a | anomaly_detection_2517828.json | n/a | ok |
+| benchmark_core | dest_top1 | ↑ | 0.3167 | 0.1933 | 0.1233 | benchmark_2517827.json | benchmark_baseline_2239996.json | ok |
+| benchmark_core | dest_top5 | ↑ | 0.3500 | 0.4167 | -0.0667 | benchmark_2517827.json | benchmark_baseline_2239996.json | ok |
+| benchmark_core | next_top1 | ↑ | 0.7667 | 0.7993 | -0.0326 | benchmark_2517827.json | benchmark_baseline_2239996.json | ok |
+| benchmark_core | next_top5 | ↑ | 0.7836 | 0.8090 | -0.0253 | benchmark_2517827.json | benchmark_baseline_2239996.json | ok |
+| benchmark_core | recon_acc_l0 | ↑ | 0.9103 | 0.8135 | 0.0968 | benchmark_2517827.json | benchmark_baseline_2239996.json | ok |
+| benchmark_core | recon_acc_l1 | ↑ | 0.8283 | 0.8632 | -0.0349 | benchmark_2517827.json | benchmark_baseline_2239996.json | ok |
+| benchmark_core | recon_acc_l2 | ↑ | 0.9955 | 0.9790 | 0.0164 | benchmark_2517827.json | benchmark_baseline_2239996.json | ok |
+| change_detection | auc | ↑ | 0.9570 | 0.9506 | 0.0064 | change_detection_2517834.json | change_detection_baseline_2241113.json | ok |
+| change_detection | margin | ↑ | 0.4508 | 0.4070 | 0.0439 | change_detection_2517834.json | change_detection_baseline_2241113.json | ok |
+| cross_city_transfer | cross_city_mrr_mean | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| cross_city_transfer | cross_city_ndcg10_mean | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| cross_city_transfer | cross_city_top10_mean | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| cross_city_transfer | cross_city_top1_mean | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| cross_city_transfer | cross_city_top5_mean | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| cross_city_transfer | cross_city_user_id_top1_mean | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| embedding_retrieval | top1 | ↑ | 0.5120 | 0.4970 | 0.0150 | embedding_retrieval_2517831.json | embedding_retrieval_baseline_2240237.json | ok |
+| embedding_retrieval | top5 | ↑ | 0.6260 | 0.6150 | 0.0110 | embedding_retrieval_2517831.json | embedding_retrieval_baseline_2240237.json | ok |
+| invariance_suite | downsample_0.25_dest_top1 | ↑ | 0.6245 | 0.6145 | 0.0100 | invariance_suite_2517830.json | invariance_baseline_2240234.json | ok |
+| invariance_suite | prefix_1.00_dest_top1 | ↑ | 0.7180 | 0.6745 | 0.0435 | invariance_suite_2517830.json | invariance_baseline_2240234.json | ok |
+| length_sensitivity | gap_dest_top1 | ↑ | -0.1367 | n/a | n/a | length_sensitivity_2517829.json | n/a | ok |
+| length_sensitivity | long_dest_top1 | ↑ | 0.6397 | n/a | n/a | length_sensitivity_2517829.json | n/a | ok |
+| macro_eval | macro_js | ↓ | 0.3149 | n/a | n/a | macro_eval_2300197.json | n/a | ok |
+| macro_eval | macro_kl | ↓ | 0.4930 | n/a | n/a | macro_eval_2300197.json | n/a | ok |
+| macro_eval | macro_l1 | ↓ | 0.2162 | n/a | n/a | macro_eval_2300197.json | n/a | ok |
+| macro_eval | macro_top1 | ↑ | 0.4100 | n/a | n/a | macro_eval_2300197.json | n/a | ok |
+| next_poi_eval | next_poi_mrr | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| next_poi_eval | next_poi_ndcg10 | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| next_poi_eval | next_poi_top1 | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| next_poi_eval | next_poi_top10 | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| next_poi_eval | next_poi_top5 | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| next_poi_eval | user_id_top1 | ↑ | n/a | n/a | n/a | n/a | n/a | missing |
+| reverse_order | delta_nll | ↓ | 5.7396 | 4.0303 | -1.7093 | reverse_order_2517833.json | reverse_order_baseline_2241112.json | ok |
+| reverse_order | delta_top1 | ↑ | -0.1430 | -0.1040 | -0.0390 | reverse_order_2517833.json | reverse_order_baseline_2241112.json | ok |
+| similarity_retrieval | dest_mean_dist_km | ↓ | 1377.7290 | n/a | n/a | similarity_retrieval_2517828.json | n/a | ok |
+| similarity_retrieval | origin_mean_dist_km | ↓ | 1377.7996 | n/a | n/a | similarity_retrieval_2517828.json | n/a | ok |
+| similarity_retrieval | self_retrieval_top1 | ↑ | 0.7950 | n/a | n/a | similarity_retrieval_2517828.json | n/a | ok |
+| similarity_retrieval | self_retrieval_top10 | ↑ | 0.8780 | n/a | n/a | similarity_retrieval_2517828.json | n/a | ok |
+| similarity_retrieval | spatial_mean_dist_km | ↓ | 1377.4362 | n/a | n/a | similarity_retrieval_2517828.json | n/a | ok |
+| transfer_suite | prediction_mae_m_mean | ↓ | 7229469.9591 | n/a | n/a | unitraj_transfer_suite_2261966.json | n/a | ok |
+| transfer_suite | recovery_mae_m_mean | ↓ | 7808349.0864 | n/a | n/a | unitraj_transfer_suite_2261966.json | n/a | ok |
+| travel_time | mae_s@0.5 | ↓ | 173.5654 | n/a | n/a | travel_time_2517828.json | n/a | ok |
+| travel_time | mape@0.5 | ↓ | 0.6664 | n/a | n/a | travel_time_2517828.json | n/a | ok |
+| travel_time | rmse_s@0.5 | ↓ | 204.9686 | n/a | n/a | travel_time_2517828.json | n/a | ok |
+| trip_classification | distance_bucket_top1 | ↑ | 0.5867 | n/a | n/a | trip_classification_2517828.json | n/a | ok |
+| trip_classification | duration_bucket_top1 | ↑ | 0.7100 | n/a | n/a | trip_classification_2517828.json | n/a | ok |
+| trip_classification | speed_mode_top1 | ↑ | 0.4167 | n/a | n/a | trip_classification_2517828.json | n/a | ok |
+| unitraj_centroid | prediction_mae_m | ↓ | 15.5052 | 77.9175 | 62.4123 | unitraj_eval_2517827.json | unitraj_external_eval_best_20260324_170752.json | ok |
+| unitraj_centroid | recovery_mae_m | ↓ | 5.0321 | 17.1616 | 12.1296 | unitraj_eval_2517827.json | unitraj_external_eval_best_20260324_170752.json | ok |
+| unitraj_centroid_robust | prediction_mae_m | ↓ | 179.9919 | n/a | n/a | unitraj_eval_robust_2517827.json | n/a | ok |
+| unitraj_centroid_robust | recovery_mae_m | ↓ | 33.4461 | n/a | n/a | unitraj_eval_robust_2517827.json | n/a | ok |
+| unitraj_regression | prediction_mae_m | ↓ | 15.8473 | 77.9175 | 62.0703 | unitraj_eval_regression_best_20260324_170752.json | unitraj_external_eval_best_20260324_170752.json | ok |
+| unitraj_regression | recovery_mae_m | ↓ | 5.3651 | 17.1616 | 11.7965 | unitraj_eval_regression_best_20260324_170752.json | unitraj_external_eval_best_20260324_170752.json | ok |
+| unitraj_regression_robust | prediction_mae_m | ↓ | 185.3167 | n/a | n/a | unitraj_eval_regression_robust_best_20260324_170752.json | n/a | ok |
+| unitraj_regression_robust | recovery_mae_m | ↓ | 32.8768 | n/a | n/a | unitraj_eval_regression_robust_best_20260324_170752.json | n/a | ok |

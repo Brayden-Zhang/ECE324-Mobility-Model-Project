@@ -1,1 +1,1 @@
-"""Training and inference utilities."""
+"""TrajectoryFM-HMT model components."""

@@ -1,0 +1,78 @@
+\begin{enumerate}
+
+\item \textbf{Claims}
+\textbf{Question:} Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The abstract/introduction claims (LBTL, LSG, LengthRobustBench; code-grounded evaluation framing) are aligned with implemented components, scripts, and reported results in the main text and appendix.
+
+\item \textbf{Limitations}
+\textbf{Question:} Does the paper discuss the limitations of the work performed by the authors?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} Section \emph{Limitations and Ethics} explicitly discusses subgroup-auditing gaps, synthetic/proxy validation limits, and privacy risks/governance considerations.
+
+\item \textbf{Theory Assumptions and Proofs}
+\textbf{Question:} For each theoretical result, does the paper provide the full set of assumptions and a complete (and correct) proof?\\
+\textbf{Answer:} Not applicable.\\
+\textbf{Justification:} The paper is empirical/implementation-focused and does not present formal theorem-proof contributions.
+
+\item \textbf{Experimental Result Reproducibility}
+\textbf{Question:} Does the paper fully disclose all information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The paper and repo provide dataset/checkpoint choices, objective definitions, evaluation protocols, and runnable scripts/commands for the main results; Appendix reproducibility notes and README map key entrypoints.
+
+\item \textbf{Open Access to Data and Code}
+\textbf{Question:} Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The paper and repository provide the code paths, SLURM entrypoints, checked-in summary artifacts, and figure/table generation scripts needed to regenerate the manuscript-facing outputs from preserved report files; large checkpoints and cache directories remain external to Git.
+
+\item \textbf{Experimental Setting/Details}
+\textbf{Question:} Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer, etc.) necessary to understand the results?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The manuscript reports dataset subset, checkpoint protocol, stratification thresholds, metrics, objective decomposition/weights, and named scripts for each benchmark component; additional operational details are in appendix/repo commands.
+
+\item \textbf{Experiment Statistical Significance}
+\textbf{Question:} Does the paper report error bars suitably and correctly defined or other appropriate information about the statistical significance of the experiments?\\
+\textbf{Answer:} No.\\
+\textbf{Justification:} The current version reports deterministic point estimates from fixed checkpoints and fixed evaluation splits. We explicitly avoid unsupported repeated-run variance claims and treat additional multi-seed significance analysis as future work.
+
+\item \textbf{Experiments Compute Resources}
+\textbf{Question:} For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} Appendix Table~\ref{tab:compute_resources} reports the requested GPU/CPU, memory, and wall-time budgets encoded in the main SLURM entrypoints, and the repository includes those executable scripts directly.
+
+\item \textbf{Code Of Ethics}
+\textbf{Question:} Does the research conducted in the paper conform, in every respect, with the NeurIPS Code of Ethics?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The work is an offline modeling/evaluation study with explicit privacy and responsible-use discussion, and no stated deviations from NeurIPS ethics requirements.
+
+\item \textbf{Broader Impacts}
+\textbf{Question:} Does the paper discuss both potential positive societal impacts and negative societal impacts of the work performed?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The paper now includes a dedicated \emph{Broader Impacts and Safeguards} section that explicitly describes positive impacts (planning/forecasting/reliability benefits), negative impacts (surveillance, unfair allocation, re-identification risk), and mitigation guidance.
+
+\item \textbf{Safeguards}
+\textbf{Question:} Does the paper describe safeguards that have been put in place for responsible release of data or models that have a high risk for misuse?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The paper now includes an explicit safeguards paragraph describing release posture, documented failure modes, and recommended governance controls (access controls, aggregation thresholds, privacy-preserving deployment practices).
+
+\item \textbf{Licenses for existing assets}
+\textbf{Question:} Are the creators or original owners of assets (e.g., code, data, models), used in the paper, properly credited and are the license and terms of use explicitly mentioned and properly respected?\\
+\textbf{Answer:} Yes.\\
+\textbf{Justification:} The appendix now includes a structured external-assets license table (\emph{Licenses and terms for external assets}, Table~\ref{tab:asset_licenses}) listing sources, license/terms, and usage context for each asset.
+
+\item \textbf{New Assets}
+\textbf{Question:} Are new assets introduced in the paper well documented and is the documentation provided alongside the assets?\\
+\textbf{Answer:} Not applicable.\\
+\textbf{Justification:} The submission's primary contribution is methodological/evaluative framing and analysis rather than release of a new standalone dataset or model asset package.
+
+\item \textbf{Crowdsourcing and Research with Human Subjects}
+\textbf{Question:} For crowdsourcing experiments and research with human subjects, does the paper include the full text of instructions given to participants and screenshots, if applicable, as well as details about compensation (if any)?\\
+\textbf{Answer:} Not applicable.\\
+\textbf{Justification:} The paper reports no crowdsourcing experiments or prospective human-subject data collection.
+
+\item \textbf{Institutional Review Board (IRB) Approvals or Equivalent for Research with Human Subjects}
+\textbf{Question:} Does the paper describe potential risks incurred by study participants, whether such risks were disclosed to the subjects, and whether IRB approvals (or equivalent) were obtained?\\
+\textbf{Answer:} Not applicable.\\
+\textbf{Justification:} No human-subject intervention study is conducted in this work.
+
+\end{enumerate}
