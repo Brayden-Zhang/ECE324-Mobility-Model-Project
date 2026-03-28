@@ -50,7 +50,7 @@ class TrajectoryDataset(Dataset):
         try:
             with open(self.data_path, "rb") as f:
                 self.data = pd.read_pickle(f)
-        except FileNotFoundError as exc:
+        except Exception as exc:
             raise FileNotFoundError(f"File not found: {self.data_path}") from exc
         
     def set_mask_ratio(self, mask_ratio):
