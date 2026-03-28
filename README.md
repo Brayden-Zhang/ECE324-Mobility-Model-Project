@@ -30,16 +30,16 @@ Run tests:
 make test
 ```
 
+Run lint checks (PEP 8 / editor warning hygiene):
+
+```bash
+make lint
+```
+
 Run the full paper verification pipeline:
 
 ```bash
 make verify-paper
-```
-
-Optional on cluster environments that require Arrow:
-
-```bash
-module load arrow/21.0.0
 ```
 
 ## Reproducing the paper
@@ -75,14 +75,8 @@ Optional large local assets are intentionally not tracked, for example:
 - HDX movement-distribution files under `data/hdx/`
 - local checkpoints under `checkpoints/`
 
-Download helper:
-
-```bash
-PYTHONPATH=src python -m route_rangers.cli.download_worldtrace \
-  --split train \
-  --output data/worldtrace \
-  --max_samples 500000
-```
+This repository includes sample datasets for quick local reproduction. External full datasets
+are optional and should be prepared locally under `data/raw/` when needed.
 
 ## Training
 
@@ -129,10 +123,10 @@ PYTHONPATH=src python -m route_rangers.cli.run_benchmarks \
 ```
 
 ```bash
-PYTHONPATH=src python -m route_rangers.cli.run_length_sensitivity \
+PYTHONPATH=src python -m route_rangers.cli.run_length_uncertainty \
   --checkpoint checkpoints/<your_hmt_checkpoint>.pt \
   --local_data data/samples/worldtrace_sample.pkl \
-  --output cache/length_sensitivity_latest.json
+  --output cache/length_uncertainty_latest.json
 ```
 
 ```bash

@@ -6,7 +6,7 @@ VENV_PYTHON := $(VENV)/bin/python
 VENV_PIP := $(VENV)/bin/pip
 RUN_PYTHON := $(if $(wildcard $(VENV_PYTHON)),$(VENV_PYTHON),$(PYTHON))
 
-.PHONY: create_environment install requirements test paper-artifacts figures paper verify-paper clean eval-sequence
+.PHONY: create_environment install requirements lint test paper-artifacts figures paper verify-paper clean eval-sequence
 
 create_environment:
 >$(PYTHON) -m venv $(VENV)
@@ -17,6 +17,9 @@ install: create_environment
 
 requirements: install
 >$(VENV_PIP) install -r requirements.txt
+
+lint:
+>PYTHONPATH=src $(RUN_PYTHON) -m ruff check src tests
 
 test:
 >PYTHONPATH=src $(RUN_PYTHON) -m unittest discover -s tests

@@ -1,14 +1,9 @@
-"""Basic checks for the repository path configuration."""
-
-from pathlib import Path
-import sys
 import unittest
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from pathlib import Path
 
 from route_rangers import config
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class ConfigTests(unittest.TestCase):

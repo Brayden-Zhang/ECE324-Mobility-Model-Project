@@ -1,7 +1,9 @@
-import torch
-import pickle, random, math
+import math
+import random
+
 import numpy as np
 import pandas as pd
+import torch
 from rdp import rdp
 from torch.utils.data import Dataset, DataLoader
 
@@ -48,8 +50,8 @@ class TrajectoryDataset(Dataset):
         try:
             with open(self.data_path, "rb") as f:
                 self.data = pd.read_pickle(f)
-        except:
-            raise FileNotFoundError(f"File not found: {self.data_path}")
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(f"File not found: {self.data_path}") from exc
         
     def set_mask_ratio(self, mask_ratio):
         self.mask_ratio = mask_ratio
