@@ -12,7 +12,6 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
 
 from route_rangers.cli import run_benchmarks as rb
-from route_rangers.cli import run_length_sensitivity as ls
 from route_rangers.eval.length_utils import bin_name_for_length, parse_bins
 
 
@@ -81,7 +80,7 @@ def _metric_from_pairs(pred: List[np.ndarray], true: List[np.ndarray]) -> Dict[s
 
 
 def evaluate_mean_displacement(
-    dataset: ls.FixedTrajectoryDataset,
+    dataset: rb.FixedTrajectoryDataset,
     indices: List[int],
     bins: np.ndarray,
     dest_prefix_ratio: float,
@@ -213,7 +212,7 @@ class SimpleGRURegressor(torch.nn.Module):
 
 
 def build_rnn_items_next(
-    dataset: ls.FixedTrajectoryDataset,
+    dataset: rb.FixedTrajectoryDataset,
     indices: List[int],
     bins: np.ndarray,
     max_pairs: int,
@@ -235,7 +234,7 @@ def build_rnn_items_next(
 
 
 def build_rnn_items_destination(
-    dataset: ls.FixedTrajectoryDataset,
+    dataset: rb.FixedTrajectoryDataset,
     indices: List[int],
     bins: np.ndarray,
     prefix_ratio: float,
@@ -421,7 +420,7 @@ def main():
         raise FileNotFoundError(f"local_data not found: {args.local_data}")
 
     records = rb.load_local_data(args.local_data)
-    dataset = ls.FixedTrajectoryDataset(
+    dataset = rb.FixedTrajectoryDataset(
         records, max_len=args.max_len, sample_limit=args.sample_limit
     )
     if len(dataset) < 10:

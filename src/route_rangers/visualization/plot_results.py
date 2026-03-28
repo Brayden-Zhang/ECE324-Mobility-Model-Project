@@ -61,7 +61,7 @@ def plot_length_and_lsg(metrics: dict) -> None:
     values = [short, long]
     x = np.arange(len(labels))
     fig, ax = plt.subplots(figsize=(7.2, 4.8))
-    bars = ax.bar(x, values, width=0.55, color=[COLORS["blue"], COLORS["orange"]], zorder=3)
+    ax.bar(x, values, width=0.55, color=[COLORS["blue"], COLORS["orange"]], zorder=3)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_ylim(0.0, 1.0)

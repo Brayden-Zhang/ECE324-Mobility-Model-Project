@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, Tuple
 
 import numpy as np
 

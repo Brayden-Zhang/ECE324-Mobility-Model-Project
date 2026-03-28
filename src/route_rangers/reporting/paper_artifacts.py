@@ -26,7 +26,6 @@ COMPUTE_SCRIPT_SPECS = (
     ("Downstream task suite", PROJECT_ROOT / "scripts" / "slurm_neurips_master.sh"),
     ("External UniTraj train", PROJECT_ROOT / "scripts" / "slurm_unitraj_train_external.sh"),
     ("External UniTraj eval", PROJECT_ROOT / "scripts" / "slurm_unitraj_eval_external.sh"),
-    ("UniTraj CSV comparison", PROJECT_ROOT / "scripts" / "slurm_unitraj_compare.sh"),
 )
 
 

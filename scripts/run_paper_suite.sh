@@ -33,7 +33,6 @@ default_local_data() {
 CHECKPOINT="${CHECKPOINT:-$(default_checkpoint)}"
 LOCAL_DATA="${LOCAL_DATA:-$(default_local_data)}"
 MAX_LEN="${MAX_LEN:-200}"
-SEEDS="${SEEDS:-42,43,44}"
 JOB_TAG="${JOB_TAG:-latest}"
 
 if [[ ! -f "${CHECKPOINT}" ]]; then
@@ -46,8 +45,7 @@ fi
 if [[ ! -f "${LOCAL_DATA}" ]]; then
   echo "ERROR: local_data not found: ${LOCAL_DATA}" >&2
   echo "Hint: set LOCAL_DATA=/abs/path/to/worldtrace_sample.pkl" >&2
-  echo "You can also download parquet with:" >&2
-  echo "  PYTHONPATH=src python -m route_rangers.cli.download_worldtrace --output data/worldtrace --max_samples 200000" >&2
+  echo "Use a local sample dataset, e.g. data/samples/worldtrace_sample.pkl" >&2
   exit 1
 fi
 
@@ -65,14 +63,6 @@ PYTHONPATH=src python -m route_rangers.cli.run_proposal_baselines \
   --max_len "${MAX_LEN}" \
   --split_mode both \
   --output "cache/proposal_baselines_${JOB_TAG}.json"
-
-PYTHONPATH=src python -m route_rangers.cli.run_length_sensitivity \
-  --checkpoint "${CHECKPOINT}" \
-  --local_data "${LOCAL_DATA}" \
-  --max_len "${MAX_LEN}" \
-  --seeds "${SEEDS}" \
-  --ci_method seed \
-  --output "cache/length_sensitivity_${JOB_TAG}.json"
 
 PYTHONPATH=src python -m route_rangers.cli.run_length_uncertainty \
   --checkpoint "${CHECKPOINT}" \

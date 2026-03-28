@@ -1,15 +1,11 @@
-"""Regression checks for paper-facing artifact generation."""
-
-from pathlib import Path
-import sys
 import tempfile
 import unittest
+from pathlib import Path
+
+from route_rangers.reporting import build_paper_metrics, write_paper_artifacts
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-
-from route_rangers.reporting import build_paper_metrics, write_paper_artifacts
 
 
 class PaperArtifactsTests(unittest.TestCase):
