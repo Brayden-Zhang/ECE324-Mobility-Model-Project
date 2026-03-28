@@ -85,19 +85,6 @@ fi
 JOB_ID="${SLURM_JOB_ID:-local}"
 RESULTS_PATH="${RESULTS_PATH:-${ROOT_DIR}/cache/train_${CKPT_PREFIX:-hmt_nohash_full}_${JOB_ID}.json}"
 
-PYTHONPATH=src python -m route_rangers.cli.build_h3_vocab \
-  --data_mode hf_zip \
-  --hf_name "${HF_NAME:-OpenTrace/WorldTrace}" \
-  --worldtrace_file "${WORLDTRACE_FILE:-Trajectory.zip}" \
-  --worldtrace_local_path "${WORLDTRACE_LOCAL_PATH}" \
-  --res0 "${RES0:-9}" \
-  --res1 "${RES1:-7}" \
-  --res2 "${RES2:-5}" \
-  --max_cells_l0 "${MAX_CELLS_L0}" \
-  --max_cells_l1 "${MAX_CELLS_L1}" \
-  --max_cells_l2 "${MAX_CELLS_L2}" \
-  --output "${H3_VOCAB}"
-
 python train_hmt.py \
   --data_mode hf_zip \
   --hf_name "${HF_NAME:-OpenTrace/WorldTrace}" \

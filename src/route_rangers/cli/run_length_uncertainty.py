@@ -9,13 +9,13 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from route_rangers.cli import run_length_sensitivity as ls
+from route_rangers.cli import run_benchmarks as rb
+from route_rangers.cli.run_benchmarks import forward_backbone, load_backbone
 from route_rangers.eval.length_utils import (
     bin_name_for_length,
     expected_calibration_error,
     parse_bins,
 )
-from route_rangers.cli.run_benchmarks import forward_backbone, load_backbone
 
 
 def parse_args():
@@ -51,13 +51,13 @@ def _new_bucket_store():
 
 def main():
     args = parse_args()
-    ls.set_seed(args.seed)
+    rb.set_seed(args.seed)
     if not Path(args.local_data).exists():
         raise FileNotFoundError(f"local_data not found: {args.local_data}")
 
     pack = load_backbone(args.checkpoint, device=args.device, override_max_len=args.max_len)
-    records = ls.load_local_data(args.local_data)
-    dataset = ls.FixedTrajectoryDataset(
+    records = rb.load_local_data(args.local_data)
+    dataset = rb.FixedTrajectoryDataset(
         records, max_len=args.max_len, sample_limit=args.sample_limit
     )
     if len(dataset) < 10:
@@ -70,7 +70,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
-        collate_fn=ls.collate_fixed,
+        collate_fn=rb.collate_fixed,
     )
 
     store: Dict[str, dict] = {"short": _new_bucket_store(), "medium": _new_bucket_store(), "long": _new_bucket_store()}

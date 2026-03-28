@@ -44,33 +44,14 @@ PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
   --output cache/unitraj_eval_step15000.json
 ```
 
-Summarize:
-```bash
-PYTHONPATH=src python -m route_rangers.cli.summarize_unitraj_eval cache/unitraj_eval_step15000.json
-```
-
-## Transfer across datasets (zero-shot)
-
-Run the same evaluation on multiple datasets without fine-tuning.
+Summaries are generated via:
 
 ```bash
-PYTHONPATH=src python -m route_rangers.cli.run_transfer_suite \
-  --checkpoint checkpoints/hmt_step_15000.pt \
-  --datasets data/samples/worldtrace_sample.pkl data/other_dataset.pkl \
-  --output cache/unitraj_transfer_suite.json
+PYTHONPATH=src python -m route_rangers.cli.collect_results
 ```
 
-## Data-efficiency sweep
-
-Build centroid mappings from a fraction of the training split to simulate data efficiency.
-
-```bash
-PYTHONPATH=src python -m route_rangers.cli.run_data_efficiency \
-  --checkpoint checkpoints/hmt_step_15000.pt \
-  --local_data data/samples/worldtrace_sample.pkl \
-  --fractions 0.05 0.1 0.2 0.5 1.0 \
-  --output cache/unitraj_data_efficiency.json
-```
+This command reads the `cache/` directory and updates results blocks in
+`docs/foundation_evals.md` and `docs/neurips_paper_draft.md` by default.
 
 ## Robustness stress tests
 
@@ -90,47 +71,22 @@ PYTHONPATH=src python -m route_rangers.cli.run_unitraj_eval \
 Evaluate how metrics differ across short/medium/long trajectory-length buckets. By default, destination metrics mask the final point to avoid trivial copying (`--dest_mask_last_k 1`).
 
 ```bash
-PYTHONPATH=src python -m route_rangers.cli.run_length_sensitivity \
+PYTHONPATH=src python -m route_rangers.cli.run_length_uncertainty \
   --checkpoint checkpoints/hmt_ablate_lenweight_step_15000.pt \
   --local_data data/samples/worldtrace_sample.pkl \
   --max_len 200 \
   --sample_limit 2000 \
-  --dest_mask_last_k 1 \
-  --output cache/length_sensitivity_lenweight_step15000.json
+  --output cache/length_uncertainty_lenweight_step15000.json
 ```
 
 CPU smoke run (faster, lower-fidelity):
 ```bash
-PYTHONPATH=src python -m route_rangers.cli.run_length_sensitivity \
+PYTHONPATH=src python -m route_rangers.cli.run_length_uncertainty \
   --checkpoint checkpoints/hmt_ablate_lenweight_step_15000.pt \
   --local_data data/samples/worldtrace_sample.pkl \
   --max_len 64 \
   --sample_limit 100 \
-  --dest_mask_last_k 1 \
-  --output cache/length_sensitivity_lenweight_step15000_smoke.json
-```
-
-## Macro distribution head (Movement Distribution)
-
-Evaluate the macro head on monthly distance-category distributions.
-
-```bash
-PYTHONPATH=src python -m route_rangers.cli.run_macro_eval \
-  --checkpoint checkpoints/hmt_stage2_final_step_100000.pt \
-  --macro_data data/processed/macro/movement_distribution_12m_monthly.npz \
-  --output cache/macro_eval.json
-```
-
-## Commuting zone destination probe
-
-Predict the destination commuting zone from pooled step embeddings.
-
-```bash
-PYTHONPATH=src python -m route_rangers.cli.run_commuting_zone_probe \
-  --checkpoint checkpoints/hmt_stage2_final_step_100000.pt \
-  --local_data data/samples/worldtrace_sample.pkl \
-  --cz_csv data/raw/hdx/commuting-zones/data-for-good-at-meta-commuting-zones-march-2023.csv \
-  --output cache/commuting_zone_probe.json
+  --output cache/length_uncertainty_lenweight_step15000_smoke.json
 ```
 
 ## Next POI prediction (MoveGPT-style)
@@ -158,15 +114,6 @@ PYTHONPATH=src python -m route_rangers.cli.run_cross_city_transfer \
   --output cache/cross_city_transfer.json
 ```
 
-## Compute efficiency
-
-Quick parameter count and throughput stats:
-
-```bash
-PYTHONPATH=src python -m route_rangers.cli.model_stats \
-  --checkpoint checkpoints/hmt_step_15000.pt \
-  --batch_size 16 --max_len 200
-```
 
 ## UniTraj-compatible baseline
 
@@ -180,12 +127,12 @@ PYTHONPATH=src python -m route_rangers.cli.run_unitraj_external_eval \
   --task both
 ```
 
-If you need a simpler interchange format, export WorldTrace into a CSV and adapt as needed.
+To train a local UniTraj-compatible baseline checkpoint from the sample dataset:
 
 ```bash
-PYTHONPATH=src python -m route_rangers.cli.unitraj.export_worldtrace_csv \
-  --input data/samples/worldtrace_sample.pkl \
-  --output data/worldtrace_sample.csv
+PYTHONPATH=src python -m route_rangers.cli.unitraj.train_unitraj \
+  --data_path data/samples/worldtrace_sample.pkl \
+  --output_dir checkpoints/unitraj
 ```
 
 
