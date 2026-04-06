@@ -15,10 +15,13 @@ from route_rangers.config import PROJECT_ROOT
 DEFAULT_REPORT_JSON = (
     PROJECT_ROOT / "reports" / "foundation" / "foundation_downstream_report.json"
 )
-DEFAULT_FOUNDATION_DOC = PROJECT_ROOT / "docs" / "foundation_evals.md"
+DEFAULT_FOUNDATION_DOC = (
+    PROJECT_ROOT / "reports" / "foundation" / "foundation_eval_summary.md"
+)
 DEFAULT_UNITRAJ_CSV = (
     PROJECT_ROOT / "reports" / "baselines" / "unitraj_hmt_external_comparison_20260324.csv"
 )
+DEFAULT_PAPER_METRICS = PROJECT_ROOT / "reports" / "paper" / "paper_metrics.json"
 COMPUTE_SCRIPT_SPECS = (
     ("HMT full pretraining", PROJECT_ROOT / "scripts" / "slurm_train_hmt_nohash_full.sh"),
     ("HMT macro stage-2", PROJECT_ROOT / "scripts" / "slurm_train_hmt_stage2.sh"),
@@ -193,6 +196,20 @@ def build_paper_metrics(
     unitraj_csv = unitraj_csv or DEFAULT_UNITRAJ_CSV
 
     rows = _report_rows(report_json)
+    if not foundation_doc.exists():
+        if DEFAULT_PAPER_METRICS.exists():
+            snapshot = _load_json(DEFAULT_PAPER_METRICS)
+            snapshot.setdefault("sources", {})
+            snapshot["sources"].update(
+                {
+                    "report_json": str(report_json),
+                    "foundation_doc": str(foundation_doc),
+                    "unitraj_csv": str(unitraj_csv),
+                }
+            )
+            return snapshot
+        raise FileNotFoundError(f"Missing foundation summary document: {foundation_doc}")
+
     foundation_text = foundation_doc.read_text(encoding="utf-8")
 
     invariance_block = _section(foundation_text, "Invariance suite")

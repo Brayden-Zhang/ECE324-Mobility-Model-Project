@@ -1,12 +1,10 @@
 # Checkpoints
 
-Store local training outputs and downloaded model weights here.
+Large checkpoints are distributed through the GitHub Releases page instead of
+Git LFS.
 
-Examples expected by the scripts in this repository:
+Primary release asset:
 
-- `checkpoints/<run_name>_step_<N>.pt`
-- `checkpoints/<run_name>_final_step_<N>.pt`
-- `checkpoints/unitraj.pt`
-- `checkpoints/unitraj/best_model.pt`
+- `v1.0-checkpoint`
 
-Checkpoint binaries are intentionally ignored by Git.
+

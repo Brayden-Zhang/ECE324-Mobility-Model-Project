@@ -21,16 +21,21 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT_DIR}"
 
 DRY_RUN="${DRY_RUN:-0}"
+SBATCH_FLAGS="${SBATCH_FLAGS:-}"
+SBATCH_ARGS=()
+if [[ -n "${SBATCH_FLAGS}" ]]; then
+    read -r -a SBATCH_ARGS <<< "${SBATCH_FLAGS}"
+fi
 
 submit() {
     local desc="$1"
     shift
     if [[ "${DRY_RUN}" == "1" ]]; then
-        echo "[DRY RUN] $desc: sbatch $*" >&2
+        echo "[DRY RUN] $desc: sbatch ${SBATCH_FLAGS} $*" >&2
         echo "DRY_$RANDOM"
     else
         local out
-        out=$(sbatch "$@" 2>&1)
+        out=$(sbatch "${SBATCH_ARGS[@]}" "$@" 2>&1)
         local jid
         jid=$(echo "$out" | grep -oP '\d+' | tail -1)
         echo "[SUBMITTED] $desc: job $jid" >&2
@@ -43,11 +48,11 @@ submit_dep() {
     local dep_jid="$2"
     shift 2
     if [[ "${DRY_RUN}" == "1" ]]; then
-        echo "[DRY RUN] $desc (after $dep_jid): sbatch --dependency=afterok:$dep_jid $*" >&2
+        echo "[DRY RUN] $desc (after $dep_jid): sbatch ${SBATCH_FLAGS} --dependency=afterok:$dep_jid $*" >&2
         echo "DRY_$RANDOM"
     else
         local out
-        out=$(sbatch --dependency=afterok:"${dep_jid}" "$@" 2>&1)
+        out=$(sbatch "${SBATCH_ARGS[@]}" --dependency=afterok:"${dep_jid}" "$@" 2>&1)
         local jid
         jid=$(echo "$out" | grep -oP '\d+' | tail -1)
         echo "[SUBMITTED] $desc (after $dep_jid): job $jid" >&2
@@ -61,9 +66,9 @@ echo "  Root: ${ROOT_DIR}"
 echo "  DRY_RUN: ${DRY_RUN}"
 echo "=========================================="
 
-# ── 1. Resume stage-1 training ──────────────────────────────────────────
+# Section 1: Resume stage-1 training
 echo ""
-echo "── Stage 1: Resume pre-training ──"
+echo "== Stage 1: Resume pre-training =="
 
 LATEST_CKPT=$(ls -1t "${ROOT_DIR}"/checkpoints/hmt_nohash_full_step_*.pt 2>/dev/null | head -n1 || true)
 if [[ -z "${LATEST_CKPT}" ]]; then
@@ -76,9 +81,9 @@ else
         --export=ALL,RESUME="${LATEST_CKPT}",RESUME_OPTIMIZER=1,MAX_STEPS=200000,SAVE_INTERVAL=10000,EVAL_INTERVAL=5000)
 fi
 
-# ── 2. Stage-2 macro head training ──────────────────────────────────────
+# Section 2: Stage-2 macro head training
 echo ""
-echo "── Stage 2: Macro distribution head ──"
+echo "== Stage 2: Macro distribution head =="
 
 STAGE2_CKPT=$(ls -1t "${ROOT_DIR}"/checkpoints/hmt_stage2_*_step_*.pt 2>/dev/null | head -n1 || true)
 if [[ -n "${TRAIN_JID}" ]] && [[ "${TRAIN_JID}" != DRY_* ]]; then
@@ -92,9 +97,9 @@ else
         --export=ALL,MAX_STEPS=50000,SAVE_INTERVAL=10000,EMBED_DIM=256,MACRO_MIX_PROB=0.5)
 fi
 
-# ── 3. Full evaluation suite ────────────────────────────────────────────
+# Section 3: Full evaluation suite
 echo ""
-echo "── Full Evaluation Suite ──"
+echo "== Full Evaluation Suite =="
 
 # Determine best checkpoint for eval
 EVAL_CKPT="${LATEST_CKPT:-${ROOT_DIR}/checkpoints/hmt_nohash_full_step_25000.pt}"
@@ -134,17 +139,17 @@ REVERSE_JID=$(submit "Reverse order stress" \
     scripts/slurm_reverse_order.sh \
     --export=ALL,CKPT_PATH="${EVAL_CKPT}")
 
-# ── 4. Downstream tasks ─────────────────────────────────────────────────
+# Section 4: Downstream tasks
 echo ""
-echo "── Downstream Tasks ──"
+echo "== Downstream Tasks =="
 
 DOWNSTREAM_JID=$(submit "Downstream tasks" \
     scripts/slurm_downstream_tasks.sh \
     --export=ALL,CKPT_PATH="${EVAL_CKPT}")
 
-# ── 5. Ablation evals ───────────────────────────────────────────────────
+# Section 5: Ablation evals
 echo ""
-echo "── Ablation Evaluations ──"
+echo "== Ablation Evaluations =="
 
 for ABLATE_CKPT in \
     "${ROOT_DIR}/checkpoints/hmt_ablate_nograph_step_15000.pt" \
@@ -159,9 +164,9 @@ for ABLATE_CKPT in \
     fi
 done
 
-# ── 6. External UniTraj baseline ────────────────────────────────────────
+# Section 6: External UniTraj baseline
 echo ""
-echo "── External UniTraj Baseline ──"
+echo "== External UniTraj Baseline =="
 
 UNITRAJ_EXT_CKPT="${ROOT_DIR}/checkpoints/unitraj.pt"
 if [[ -f "${UNITRAJ_EXT_CKPT}" ]]; then
@@ -172,9 +177,9 @@ else
     echo "WARNING: External UniTraj checkpoint not found at ${UNITRAJ_EXT_CKPT}"
 fi
 
-# ── 7. Collect results (runs after all evals) ───────────────────────────
+# Section 7: Collect results (runs after all evals)
 echo ""
-echo "── Post-processing ──"
+echo "== Post-processing =="
 echo "After all jobs complete, run:"
 echo "  PYTHONPATH=src python -m route_rangers.cli.collect_results"
 echo ""

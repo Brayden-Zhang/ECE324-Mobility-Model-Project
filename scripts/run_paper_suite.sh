@@ -86,7 +86,6 @@ PYTHONPATH=src python -m route_rangers.cli.run_od_matrix_eval \
 
 PYTHONPATH=src python -m route_rangers.cli.collect_results \
   --cache_dir cache \
-  --foundation_doc docs/foundation_evals.md \
-  --paper_doc docs/neurips_paper_draft.md
+  --foundation_doc reports/foundation/foundation_eval_summary.md
 
 echo "paper suite complete"

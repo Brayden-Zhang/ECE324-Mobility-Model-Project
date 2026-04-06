@@ -16,7 +16,11 @@ def parse_args():
     parser.add_argument(
         "--report_json", type=str, default="reports/foundation/foundation_downstream_report.json"
     )
-    parser.add_argument("--foundation_doc", type=str, default="docs/foundation_evals.md")
+    parser.add_argument(
+        "--foundation_doc",
+        type=str,
+        default="reports/foundation/foundation_eval_summary.md",
+    )
     parser.add_argument(
         "--unitraj_csv",
         type=str,

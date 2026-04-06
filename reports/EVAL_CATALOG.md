@@ -1,56 +1,37 @@
 # Evaluation Catalog
 
-This file organizes completed evaluations and paper-facing outputs in `reports/`.
-It is designed to make figure/table provenance obvious for new contributors.
+This file maps the checked-in evaluation artifacts in `reports/` to the summary
+tables and figures that can be regenerated from this repository snapshot.
 
 ## Core evaluation artifacts
 
-- `foundation/foundation_downstream_report.json`: machine-readable aggregate of downstream tasks.
-- `foundation/foundation_downstream_report.csv`: flat table export for quick filtering/sheets use.
-- `foundation/foundation_downstream_report.md`: markdown summary used for narrative inspection.
-- `baselines/unitraj_hmt_external_comparison_20260324.csv`: HMT vs external UniTraj meter-scale comparison.
-
-## Paper artifact snapshots
-
-- `paper/paper_metrics.json`: consolidated metrics consumed by figure/table generators.
-- `paper/paper_length_table.tex`: length sensitivity table included by `docs/paper.tex`.
-- `paper/paper_robustness_table.tex`: robustness diagnostics table for the main results.
-- `paper/paper_unitraj_main.tex`: primary HMT vs UniTraj table.
-- `paper/paper_unitraj_clean.tex`: appendix clean-metric UniTraj-style comparison table.
-- `paper/paper_macro_table.tex`: macro mobility metrics table.
-- `paper/paper_compute_table.tex`: scheduler resource budget table.
-
-## Figure/table provenance map
-
-- `docs/figures/results_length_lsg.pdf` <- `reports/paper/paper_metrics.json` (`length`)
-- `docs/figures/results_robustness_suite.pdf` <- `reports/paper/paper_metrics.json` (`invariance`, `reverse_order`, `change_detection`)
-- `docs/figures/results_meter_scale.pdf` <- `reports/paper/paper_metrics.json` (`unitraj_clean`)
-- `docs/paper.tex` table includes:
-  - `../reports/paper/paper_length_table.tex`
-  - `../reports/paper/paper_robustness_table.tex`
-  - `../reports/paper/paper_unitraj_main.tex`
-  - `../reports/paper/paper_unitraj_clean.tex`
-  - `../reports/paper/paper_macro_table.tex`
-  - `../reports/paper/paper_compute_table.tex`
+- `foundation/foundation_downstream_report.json`: machine-readable aggregate of
+  downstream tasks.
+- `foundation/foundation_downstream_report.csv`: flat export for spreadsheet use.
+- `foundation/foundation_downstream_report.md`: compact aggregate report.
+- `foundation/foundation_eval_summary.md`: maintained sectioned summary used by
+  the paper-artifact generator.
+- `baselines/unitraj_hmt_external_comparison_20260324.csv`: HMT vs external
+  UniTraj meter-scale comparison.
 
 ## Regeneration commands
 
 ```bash
 PYTHONPATH=src python -m route_rangers.cli.generate_paper_artifacts
 PYTHONPATH=src python -m route_rangers.visualization.plot_results
-cd docs && latexmk -pdf -interaction=nonstopmode paper.tex
 ```
 
-Or run the combined target:
+Or use:
 
 ```bash
-make paper
+make verify-paper
 ```
 
 ## Update policy
 
-When adding a new evaluation:
+When adding a new checked-in evaluation:
 
-1. Add output artifact(s) under `reports/` with stable names.
-2. Add an entry here describing metric scope and intended use.
-3. If used by the paper, add/refresh provenance links in this catalog.
+1. Write stable outputs under `reports/`.
+2. Add the artifact here with a short description.
+3. Update `reports/foundation/foundation_eval_summary.md` if the result feeds the
+   paper-style artifact pipeline.

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Submit a staged "elite" WorldTrace pipeline:
 # 1. Resume full WorldTrace pretraining from the strongest local no-hash checkpoint.
 # 2. Run stage-2 macro/downstream multitask fine-tuning from that checkpoint.
 # 3. Launch the evaluation/downstream suite and the UniTraj-compatible baseline.
@@ -11,19 +10,24 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT_DIR}"
 
 DRY_RUN="${DRY_RUN:-0}"
+SBATCH_FLAGS="${SBATCH_FLAGS:-}"
+SBATCH_ARGS=()
+if [[ -n "${SBATCH_FLAGS}" ]]; then
+  read -r -a SBATCH_ARGS <<< "${SBATCH_FLAGS}"
+fi
 
 submit_job() {
   local desc="$1"
   shift
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    echo "[DRY RUN] ${desc}: sbatch $*" >&2
+    echo "[DRY RUN] ${desc}: sbatch ${SBATCH_FLAGS} $*" >&2
     echo "DRY_${RANDOM}"
     return 0
   fi
 
   local out
-  out=$(sbatch "$@" 2>&1)
+  out=$(sbatch "${SBATCH_ARGS[@]}" "$@" 2>&1)
   local jid
   jid=$(awk '/Submitted batch job/ {print $4}' <<<"${out}" | tail -n1)
   if [[ -z "${jid}" ]]; then
@@ -41,13 +45,13 @@ submit_afterok() {
   shift 2
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    echo "[DRY RUN] ${desc} (after ${dep_jid}): sbatch --dependency=afterok:${dep_jid} $*" >&2
+    echo "[DRY RUN] ${desc} (after ${dep_jid}): sbatch ${SBATCH_FLAGS} --dependency=afterok:${dep_jid} $*" >&2
     echo "DRY_${RANDOM}"
     return 0
   fi
 
   local out
-  out=$(sbatch --dependency=afterok:"${dep_jid}" "$@" 2>&1)
+  out=$(sbatch "${SBATCH_ARGS[@]}" --dependency=afterok:"${dep_jid}" "$@" 2>&1)
   local jid
   jid=$(awk '/Submitted batch job/ {print $4}' <<<"${out}" | tail -n1)
   if [[ -z "${jid}" ]]; then
@@ -334,7 +338,7 @@ unitraj_ext_jid="$(
 )"
 
 collect_dep="${eval_jid}:${downstream_jid}:${length_jid}:${invariance_jid}:${retrieval_jid}:${mobility_jid}:${reverse_jid}:${change_jid}:${unitraj_reg_jid}:${unitraj_ext_jid}"
-collect_wrap="cd ${ROOT_DIR} && module load arrow/21.0.0 && source .venv/bin/activate && PYTHONPATH=src python -m route_rangers.cli.collect_results"
+collect_wrap="cd ${ROOT_DIR} && source .venv/bin/activate && PYTHONPATH=src python -m route_rangers.cli.collect_results"
 collect_jid="$(
   submit_afterok \
     "Collect results" \

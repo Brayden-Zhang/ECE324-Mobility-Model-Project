@@ -2,8 +2,6 @@
 # Run benchmark suite on the latest checkpoint.
 
 #SBATCH --job-name=trajfm-bench-latest
-#SBATCH --account=aip-gigor
-#SBATCH --partition=gpubase_h100_b3,gpubase_h100_b4,gpubase_h100_b5
 #SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
@@ -21,7 +19,11 @@ if [[ ! -f "${ROOT_DIR}/src/route_rangers/cli/run_benchmarks.py" ]]; then
 fi
 cd "${ROOT_DIR}"
 
-module load arrow/21.0.0
+if [[ -n "${CLUSTER_MODULES:-}" ]] && command -v module >/dev/null 2>&1; then
+  for module_name in ${CLUSTER_MODULES}; do
+    module load "${module_name}"
+  done
+fi
 
 if [[ -f "${ROOT_DIR}/.venv/bin/activate" ]]; then
   source "${ROOT_DIR}/.venv/bin/activate"

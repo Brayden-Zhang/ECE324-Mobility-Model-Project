@@ -40,12 +40,17 @@ if [[ -z "${CKPT_PATH}" || ! -f "${CKPT_PATH}" ]]; then
 fi
 
 EXPORT_VARS="ALL,CKPT_PATH=${CKPT_PATH},POI_DATA=${POI_DATA_INPUT},SPLIT_MODE=${SPLIT_MODE:-temporal},MAX_LEN=${MAX_LEN:-200},BATCH_SIZE=${BATCH_SIZE:-32},PROBE_EPOCHS=${PROBE_EPOCHS:-8},PROBE_LR=${PROBE_LR:-2e-3},MIN_CITY_RECORDS=${MIN_CITY_RECORDS:-100}"
+SBATCH_FLAGS="${SBATCH_FLAGS:-}"
+SBATCH_ARGS=()
+if [[ -n "${SBATCH_FLAGS}" ]]; then
+  read -r -a SBATCH_ARGS <<< "${SBATCH_FLAGS}"
+fi
 
 echo "Submitting mobility foundation eval job..."
 echo "Checkpoint: ${CKPT_PATH}"
 echo "POI data: ${POI_DATA_INPUT}"
 
-OUT=$(sbatch --export="${EXPORT_VARS}" scripts/slurm_mobility_foundation_eval.sh)
+OUT=$(sbatch "${SBATCH_ARGS[@]}" --export="${EXPORT_VARS}" scripts/slurm_mobility_foundation_eval.sh)
 echo "${OUT}"
 
 echo "After completion, refresh consolidated reports with:"

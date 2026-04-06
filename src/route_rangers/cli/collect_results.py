@@ -13,7 +13,9 @@ def parse_args():
     )
     parser.add_argument("--cache_dir", type=str, default="cache")
     parser.add_argument(
-        "--foundation_doc", type=str, default="docs/foundation_evals.md"
+        "--foundation_doc",
+        type=str,
+        default="reports/foundation/foundation_eval_summary.md",
     )
     parser.add_argument(
         "--paper_doc",
@@ -660,7 +662,7 @@ def main():
         ]
     )
 
-    # Update foundation_evals.md
+    # Update the maintained foundation summary document.
     foundation_path = Path(args.foundation_doc)
     if foundation_path.exists():
         text = foundation_path.read_text()
